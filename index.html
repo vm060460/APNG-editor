@@ -20,7 +20,7 @@
       Upload, Play, Pause, Image as ImageIcon, Download, 
       AlertCircle, Archive, Layers, Globe, Undo2, Redo2, 
       Sparkles, Move, RotateCw, Eraser, Crop, Wand2, Settings2,
-      SlidersHorizontal, Clock, AlignLeft, AlignCenter, AlignRight
+      SlidersHorizontal, Clock, AlignLeft, AlignCenter, AlignRight, X, ImagePlus
     } from 'https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0';
 
     let parseGIF, decompressFrames, UPNG, fflate;
@@ -79,6 +79,9 @@
       const [isCropMode, setIsCropMode] = useState(false);
       const [cropRect, setCropRect] = useState({ x: 0, y: 0, w: 100, h: 100 });
       const cropStartRef = useRef(null);
+      
+      const [draggedFrameIdx, setDraggedFrameIdx] = useState(null);
+      const [isDragOver, setIsDragOver] = useState(false); // 拖曳狀態指示
 
       // 漸變特效狀態
       const [gradType, setGradType] = useState('opacity');
@@ -265,6 +268,11 @@
         easings: { opacity: 'linear', rotate: 'linear', translate: 'linear', color: 'linear' }
       });
 
+      const cloneCanvas = (oldCanvas) => {
+        const c = document.createElement('canvas'); c.width = oldCanvas.width; c.height = oldCanvas.height;
+        c.getContext('2d').drawImage(oldCanvas, 0, 0); return c;
+      };
+
       const gifToFrames = (buffer) => {
         const gif = parseGIF(buffer); const rawFrames = decompressFrames(gif, true);
         const w = gif.lsd.width; const h = gif.lsd.height;
@@ -311,41 +319,83 @@
         return [buildFrameObj(canvas, 1000)];
       };
 
-      const processFile = async (file) => {
-        if (!isAppReady) return;
+      // 解析檔案並回傳影格陣列 (共用函式)
+      const parseFileToFrames = async (file) => {
+        const buffer = await file.arrayBuffer(); const bytes = new Uint8Array(buffer);
+        if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return gifToFrames(buffer);
+        else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return await apngToFrames(buffer);
+        else return await loadGenericImage(file);
+      };
+
+      // 統一檔案處理函式 (支援載入新檔或替換圖片)
+      const handleFileDropOrSelect = async (file, isReplace = false) => {
+        if (!file || !isAppReady) return;
         try {
           setIsLoading(true); setError(null); setIsPlaying(false); isRestoring.current = true;
+          setIsCropMode(false); // 取消裁切模式以防錯誤
           
-          // 解析並記錄檔名 (去除副檔名)
           const nameExtIdx = file.name.lastIndexOf('.');
           const nameWithoutExt = nameExtIdx !== -1 ? file.name.substring(0, nameExtIdx) : file.name;
           setOriginalFileName(nameWithoutExt);
 
-          setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
-          setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0);
-          setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
-          chromaCache.current = { bgStateStr: '', canvases: [] }; 
-          
-          const buffer = await file.arrayBuffer(); const bytes = new Uint8Array(buffer);
-          let parsedFrames = [];
+          const parsedFrames = await parseFileToFrames(file);
 
-          if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) parsedFrames = gifToFrames(buffer);
-          else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) parsedFrames = await apngToFrames(buffer);
-          else parsedFrames = await loadGenericImage(file);
+          if (isReplace && frames.length > 0) {
+              // --- 換圖邏輯：保留目前的時間軸特效長度 ---
+              const replacedFrames = frames.map((f, i) => {
+                  // 新圖片若較短，末尾重複最後一張；若較長則截斷多餘部分
+                  const newFrameData = parsedFrames[i] || parsedFrames[parsedFrames.length - 1];
+                  return { ...f, canvas: newFrameData.canvas };
+              });
 
-          setFrames(parsedFrames); setCurrentFrameIndex(0); setSelectedEditFrame(0); currentFrameIndexRef.current = 0;
-          pushInitialState(parsedFrames);
-          
-          if (parsedFrames.length === 1) setActiveTab('convert');
-          else { setActiveTab('global'); setIsPlaying(false); }
+              setFrames(replacedFrames);
+              chromaCache.current = { bgStateStr: '', canvases: [] }; // 清除舊圖的去背快取
+              
+              // 記錄進歷史紀錄，不覆蓋全域屬性
+              const currentState = {
+                frames: replacedFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
+                globals: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, speed, bgRemoval }
+              };
+              const newHistory = history.slice(0, historyPointer + 1);
+              newHistory.push(currentState);
+              if (newHistory.length > 30) newHistory.shift();
+              setHistory(newHistory);
+              setHistoryPointer(newHistory.length - 1);
+
+          } else {
+              // --- 載入新檔邏輯：完全重置 ---
+              setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
+              setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0);
+              setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
+              chromaCache.current = { bgStateStr: '', canvases: [] }; 
+
+              setFrames(parsedFrames); setCurrentFrameIndex(0); setSelectedEditFrame(0); currentFrameIndexRef.current = 0;
+              pushInitialState(parsedFrames);
+              
+              if (parsedFrames.length === 1) setActiveTab('convert');
+              else { setActiveTab('global'); setIsPlaying(false); }
+          }
           setTimeout(() => { isRestoring.current = false; }, 50);
         } catch (err) {
           setError("檔案解析失敗，請確認格式是否正確。");
-        } finally { setIsLoading(false); }
+        } finally { 
+          setIsLoading(false); 
+        }
       };
 
-      const onFileChange = (e) => { const f = e.target.files[0]; if (f) processFile(f); };
-      const onDrop = (e) => { e.preventDefault(); if (!isAppReady) return; const f = e.dataTransfer.files[0]; if (f) processFile(f); };
+      const onFileChange = (e) => { handleFileDropOrSelect(e.target.files[0], false); e.target.value = null; };
+      const onReplaceFileChange = (e) => { handleFileDropOrSelect(e.target.files[0], true); e.target.value = null; };
+      
+      const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+      const handleDragLeave = (e) => { e.preventDefault(); setIsDragOver(false); };
+      const onDrop = (e) => { 
+        e.preventDefault(); 
+        setIsDragOver(false);
+        if (!isAppReady) return; 
+        const f = e.dataTransfer.files[0]; 
+        // 若已經有影格，則拖曳視為換圖；若無，則視為全新載入
+        if (f) handleFileDropOrSelect(f, frames.length > 0); 
+      };
 
       // 單圖轉換
       const convertToAnimation = () => {
@@ -540,7 +590,19 @@
           return { ...f, canvas: c };
         });
         setFrames(newFrames); setIsCropMode(false); chromaCache.current = { bgStateStr: '', canvases: [] };
-        pushInitialState(newFrames); setTimeout(() => { isRestoring.current = false; }, 50);
+        
+        // 修正：裁切功能完成時，不清除目前全域濾鏡和漸變，只推入新的幀歷史
+        const currentState = {
+          frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
+          globals: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, speed, bgRemoval }
+        };
+        const newHistory = history.slice(0, historyPointer + 1);
+        newHistory.push(currentState);
+        if (newHistory.length > 30) newHistory.shift();
+        setHistory(newHistory);
+        setHistoryPointer(newHistory.length - 1);
+
+        setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
       // 播放循環
@@ -678,6 +740,36 @@
         });
       };
 
+      const handleDropFrame = (e, targetIndex) => {
+        e.preventDefault();
+        if (draggedFrameIdx === null || draggedFrameIdx === targetIndex) return;
+        
+        isRestoring.current = true;
+        setFrames(prev => {
+            const newFrames = [...prev];
+            const [moved] = newFrames.splice(draggedFrameIdx, 1);
+            newFrames.splice(targetIndex, 0, moved);
+            return newFrames;
+        });
+        setCurrentFrameIndex(targetIndex);
+        setSelectedEditFrame(targetIndex);
+        setDraggedFrameIdx(null);
+        setTimeout(() => { isRestoring.current = false; }, 50);
+      };
+
+      const handleDeleteFrame = (e, index) => {
+        e.stopPropagation();
+        if (frames.length <= 1) return;
+        isRestoring.current = true;
+        setFrames(prev => prev.filter((_, i) => i !== index));
+        const newLen = frames.length - 1;
+        const nextIdx = index >= newLen ? Math.max(0, newLen - 1) : index;
+        setCurrentFrameIndex(nextIdx);
+        setSelectedEditFrame(nextIdx);
+        if (newLen === 1) setActiveTab('convert');
+        setTimeout(() => { isRestoring.current = false; }, 50);
+      };
+
       // 時間軸 SVG 曲線繪製 (支援多軌道)
       const renderTimelineCurves = (trackId, strokeColor) => {
         const keyframesData = frames.map((f, i) => ({ frame: f, idx: i })).filter(k => k.frame.keyframes[trackId]);
@@ -811,9 +903,14 @@
             {frames.length > 0 && (
               <div className="flex items-center gap-3">
                 {!isCropMode && (
-                  <button onClick={() => { setIsCropMode(true); setIsPlaying(false); setCropRect({x:0, y:0, w:frames[0].canvas.width, h:frames[0].canvas.height}); }} className="flex items-center gap-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-md font-medium transition-colors">
-                    <Crop className="w-4 h-4"/> 裁切/擴展
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => document.getElementById('replace-upload').click()} className="flex items-center gap-1 text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-md font-medium transition-colors" title="替換圖片，但保留目前的所有特效與變速設定">
+                      <ImagePlus className="w-4 h-4"/> 換圖
+                    </button>
+                    <button onClick={() => { setIsCropMode(true); setIsPlaying(false); setCropRect({x:0, y:0, w:frames[0].canvas.width, h:frames[0].canvas.height}); }} className="flex items-center gap-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-md font-medium transition-colors">
+                      <Crop className="w-4 h-4"/> 裁切/擴展
+                    </button>
+                  </div>
                 )}
                 <div className="flex items-center gap-1 border-x border-slate-200 px-3 mx-2">
                   <button onClick={undo} disabled={historyPointer <= 0} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30"><Undo2 className="w-4 h-4" /></button>
@@ -835,8 +932,22 @@
             {/* 左側：畫布與專業時間軸 */}
             <div className="flex-1 flex flex-col min-w-0 bg-slate-100">
               
-              {/* Canvas Area */}
-              <div className={`flex-1 relative flex items-center justify-center p-4 md:p-8 checkered-bg-light overflow-hidden`} onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+              {/* Canvas Area (含拖曳換圖覆蓋層) */}
+              <div 
+                className={`flex-1 relative flex items-center justify-center p-4 md:p-8 checkered-bg-light overflow-hidden transition-all ${isDragOver ? 'bg-purple-50' : ''}`} 
+                onDragOver={handleDragOver} 
+                onDragLeave={handleDragLeave}
+                onDrop={onDrop}
+              >
+                {isDragOver && (
+                  <div className="absolute inset-0 bg-purple-500/10 backdrop-blur-[2px] z-50 flex items-center justify-center border-4 border-purple-500 border-dashed rounded-xl m-4 pointer-events-none">
+                    <div className="bg-white/90 px-8 py-6 rounded-2xl shadow-xl flex flex-col items-center gap-3">
+                      <ImagePlus className="w-12 h-12 text-purple-600 animate-bounce" />
+                      <span className="text-purple-700 font-bold text-xl">{frames.length > 0 ? "放開以替換圖案 (保留特效)" : "放開以匯入圖片"}</span>
+                    </div>
+                  </div>
+                )}
+                
                 {error && (<div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 shadow-md z-40 border border-red-200 text-sm"><AlertCircle className="w-5 h-5" /> {error}</div>)}
 
                 {frames.length > 0 ? (
@@ -929,17 +1040,40 @@
                       <span className="absolute -left-10 text-[9px] text-slate-500 font-bold z-20">影格</span>
                       {frames.map((frame, idx) => {
                         const isSelected = selectedEditFrame === idx;
+                        const isDragged = draggedFrameIdx === idx;
                         return (
                           <div 
-                            key={idx} 
-                            className={`absolute top-0 bottom-0 flex items-center justify-center transition-all ${isSelected ? 'border-2 border-blue-500 bg-blue-500/20 z-10 scale-110 shadow-md' : 'opacity-80'}`}
+                            key={`${idx}-${frame.delay}`} 
+                            className={`absolute top-0 bottom-0 flex items-center justify-center transition-all group ${isSelected ? 'border-2 border-blue-500 bg-blue-500/20 z-10 scale-110 shadow-md' : 'opacity-80 hover:opacity-100'} ${isDragged ? 'opacity-30' : ''}`}
                             style={{ 
                               left: `calc(${(idx / (frames.length - 1)) * 100}% - 14px)`, 
-                              width: '28px' 
+                              width: '28px',
+                              cursor: 'grab'
                             }}
-                            title={`第 ${idx} 格`}
+                            title={`第 ${idx} 格 (拖曳以移動)`}
+                            draggable
+                            onDragStart={(e) => { setDraggedFrameIdx(idx); e.dataTransfer.setData('text/plain', idx); }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => handleDropFrame(e, idx)}
+                            onDragEnd={() => setDraggedFrameIdx(null)}
+                            onMouseDown={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedEditFrame(idx); 
+                              setCurrentFrameIndex(idx); 
+                              setIsPlaying(false); 
+                              setActiveTab('frame'); 
+                            }}
                           >
                             <FrameThumbnail sourceCanvas={frame.canvas} />
+                            {frames.length > 1 && (
+                              <button 
+                                onClick={(e) => handleDeleteFrame(e, idx)} 
+                                className={`absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow transition-all z-30 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} hover:bg-red-600 hover:scale-125`}
+                                title="刪除此格"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -1184,7 +1318,8 @@
                       </button>
                     )}
                   </div>
-                  <input id="file-upload" type="file" accept="image/gif, image/png, image/apng" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
+                  <input id="file-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
+                  <input id="replace-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp" className="hidden" disabled={!isAppReady} onChange={onReplaceFileChange} />
                 </div>
               </div>
             )}
