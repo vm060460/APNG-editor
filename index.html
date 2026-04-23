@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>APNG編輯器 4.0</title>
+  <title>動態影像編輯器</title>
   <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 載入 Babel -->
@@ -67,7 +67,6 @@
       const [speed, setSpeed] = useState(1.0);
       
       const [activeTab, setActiveTab] = useState('global');
-      const [selectedEditFrame, setSelectedEditFrame] = useState(0);
       const [selectedKeyframe, setSelectedKeyframe] = useState(null); // { idx, trackId }
       
       // 全域狀態
@@ -273,11 +272,11 @@
             } else if (e.key === 'ArrowRight') {
               e.preventDefault();
               setIsPlaying(false);
-              setCurrentFrameIndex(prev => { const n = Math.min(framesLenRef.current - 1, prev + 1); setSelectedEditFrame(n); return n; });
+              setCurrentFrameIndex(prev => Math.min(framesLenRef.current - 1, prev + 1));
             } else if (e.key === 'ArrowLeft') {
               e.preventDefault();
               setIsPlaying(false);
-              setCurrentFrameIndex(prev => { const n = Math.max(0, prev - 1); setSelectedEditFrame(n); return n; });
+              setCurrentFrameIndex(prev => Math.max(0, prev - 1));
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
               // 刪除選中的關鍵影格
               if (selectedKeyframeRef.current) {
@@ -419,7 +418,7 @@
                   setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
                   chromaCache.current = { bgStateStr: '', canvases: [] }; 
 
-                  setFrames(parsedFrames); setCurrentFrameIndex(0); setSelectedEditFrame(0); currentFrameIndexRef.current = 0;
+                  setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
                   pushInitialState(parsedFrames);
                   setActiveTab('global'); setIsPlaying(false);
               } else {
@@ -447,7 +446,7 @@
               setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
               chromaCache.current = { bgStateStr: '', canvases: [] }; 
 
-              setFrames(parsedFrames); setCurrentFrameIndex(0); setSelectedEditFrame(0); currentFrameIndexRef.current = 0;
+              setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
               setSelectedFrames([]); 
               pushInitialState(parsedFrames);
               
@@ -486,8 +485,8 @@
           newFrames.push(buildFrameObj(c, delay));
         }
         
-        setFrames(newFrames); setCurrentFrameIndex(0); setSelectedEditFrame(0); setSelectedKeyframe(null);
-        pushInitialState(newFrames); setActiveTab('gradient'); setIsPlaying(false);
+        setFrames(newFrames); setCurrentFrameIndex(0); setSelectedKeyframe(null);
+        pushInitialState(newFrames); setActiveTab('edit'); setIsPlaying(false);
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
@@ -573,7 +572,7 @@
         const type = mode.split('_')[0];
         setGradType(type);
         setActiveGradEffects(prev => ({ ...prev, [type]: mode }));
-        if (activeTab === 'gradient' && frames.length > 1 && !isRestoring.current) {
+        if (activeTab === 'edit' && frames.length > 1 && !isRestoring.current) {
            applyGradientEffects(mode);
         }
       };
@@ -589,7 +588,7 @@
         
         setGradType('translate');
         setActiveGradEffects(prev => ({ ...prev, translate: 'translate' }));
-        if (activeTab === 'gradient' && frames.length > 1 && !isRestoring.current) {
+        if (activeTab === 'edit' && frames.length > 1 && !isRestoring.current) {
            applyGradientEffects('translate');
         }
       };
@@ -629,7 +628,7 @@
         return interpolated;
       }, []);
 
-      // 畫布裁切
+      // 畫布裁切對位 (修正為使用實際顯示比例計算)
       const alignCropRect = (position) => {
         if (frames.length === 0) return;
         const orgW = frames[0].canvas.width; const orgH = frames[0].canvas.height;
@@ -645,15 +644,19 @@
       const handleCropMouseDown = (e) => {
         if (!isCropMode || !overlayRef.current) return;
         const rect = overlayRef.current.getBoundingClientRect();
-        const displayW = rect.width; const actualW = frames[0].canvas.width; const scale = actualW / displayW;
-        const startX = (e.clientX - rect.left) * scale; const startY = (e.clientY - rect.top) * scale;
+        // 透過外層容器實際顯示長寬與原始長寬進行精確比例換算
+        const frameW = frames[0].canvas.width;
+        const frameH = frames[0].canvas.height;
+        const scaleX = frameW / rect.width;
+        const scaleY = frameH / rect.height;
+        const startX = (e.clientX - rect.left) * scaleX; 
+        const startY = (e.clientY - rect.top) * scaleY;
         
-        cropStartRef.current = { startX, startY, scale, rect };
         setCropRect({ x: startX, y: startY, w: 0, h: 0 });
 
         const onMouseMove = (moveEvent) => {
-          const currentX = (moveEvent.clientX - rect.left) * scale;
-          const currentY = (moveEvent.clientY - rect.top) * scale;
+          const currentX = (moveEvent.clientX - rect.left) * scaleX;
+          const currentY = (moveEvent.clientY - rect.top) * scaleY;
           setCropRect({
             x: Math.min(startX, currentX), y: Math.min(startY, currentY),
             w: Math.abs(currentX - startX), h: Math.abs(currentY - startY)
@@ -661,7 +664,6 @@
         };
 
         const onMouseUp = () => {
-          cropStartRef.current = null;
           window.removeEventListener('mousemove', onMouseMove);
           window.removeEventListener('mouseup', onMouseUp);
         };
@@ -671,8 +673,10 @@
       const applyCropAndResize = () => {
         if (cropRect.w <= 0 || cropRect.h <= 0) { setIsCropMode(false); return; }
         isRestoring.current = true;
+        const w = Math.max(1, Math.round(cropRect.w));
+        const h = Math.max(1, Math.round(cropRect.h));
         const newFrames = frames.map(f => {
-          const c = document.createElement('canvas'); c.width = Math.round(cropRect.w); c.height = Math.round(cropRect.h);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
           const ctx = c.getContext('2d');
           ctx.drawImage(f.canvas, -Math.round(cropRect.x), -Math.round(cropRect.y));
           return { ...f, canvas: c };
@@ -769,14 +773,14 @@
         if (e.target.closest('.keyframe-diamond')) return; 
         if (!timelineTrackRef.current) return;
         setIsPlaying(false);
-        setSelectedKeyframe(null); // 點擊背景空白處取消選中關鍵影格
+        setSelectedKeyframe(null); 
         
         const rect = timelineTrackRef.current.getBoundingClientRect();
         
         const updateFrame = (clientX) => {
           const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
           const idx = Math.round(ratio * (frames.length - 1));
-          setCurrentFrameIndex(idx); setSelectedEditFrame(idx);
+          setCurrentFrameIndex(idx);
         };
         updateFrame(e.clientX);
         
@@ -806,8 +810,8 @@
                     newF[fromIdx].keyframes[trackId] = false;
                     return newF;
                 });
-                setCurrentFrameIndex(toIdx); setSelectedEditFrame(toIdx);
-                // 拖曳結束後，如果被選取的關鍵影格變更位置，同步更新
+                setCurrentFrameIndex(toIdx);
+                // 拖曳結束後同步選中狀態
                 if (selectedKeyframeRef.current?.idx === fromIdx && selectedKeyframeRef.current?.trackId === trackId) {
                    setSelectedKeyframe({ idx: toIdx, trackId });
                 }
@@ -823,15 +827,15 @@
           const newFrames = [...prevFrames];
           const track = Object.keys(TRACK_PROPS).find(t => TRACK_PROPS[t].includes(key));
           
-          if (!newFrames[selectedEditFrame].keyframes[track]) {
-             const rawInterpolated = getRawInterpolatedFilters(prevFrames, selectedEditFrame);
-             newFrames[selectedEditFrame].customFilters = { ...newFrames[selectedEditFrame].customFilters };
+          if (!newFrames[currentFrameIndex].keyframes[track]) {
+             const rawInterpolated = getRawInterpolatedFilters(prevFrames, currentFrameIndex);
+             newFrames[currentFrameIndex].customFilters = { ...newFrames[currentFrameIndex].customFilters };
              TRACK_PROPS[track].forEach(p => {
-                 newFrames[selectedEditFrame].customFilters[p] = rawInterpolated[p];
+                 newFrames[currentFrameIndex].customFilters[p] = rawInterpolated[p];
              });
-             newFrames[selectedEditFrame].keyframes = { ...newFrames[selectedEditFrame].keyframes, [track]: true };
+             newFrames[currentFrameIndex].keyframes = { ...newFrames[currentFrameIndex].keyframes, [track]: true };
           }
-          newFrames[selectedEditFrame].customFilters[key] = value;
+          newFrames[currentFrameIndex].customFilters[key] = value;
           return newFrames;
         });
       };
@@ -855,7 +859,6 @@
           } else {
               setSelectedFrames([index]);
               setCurrentFrameIndex(index);
-              setSelectedEditFrame(index);
           }
       };
 
@@ -896,7 +899,7 @@
           isRestoring.current = true;
           setFrames(prev => prev.filter((_, i) => !selectedFrames.includes(i)));
           setSelectedFrames([]);
-          setCurrentFrameIndex(0); setSelectedEditFrame(0);
+          setCurrentFrameIndex(0);
           setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
@@ -934,7 +937,7 @@
             return reversed;
         });
         setSelectedFrames([]);
-        setCurrentFrameIndex(0); setSelectedEditFrame(0);
+        setCurrentFrameIndex(0);
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
@@ -973,7 +976,6 @@
             return newFrames;
         });
         setCurrentFrameIndex(targetIndex);
-        setSelectedEditFrame(targetIndex);
         setDraggedFrameIdx(null);
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
@@ -986,11 +988,11 @@
         const newLen = frames.length - 1;
         const nextIdx = index >= newLen ? Math.max(0, newLen - 1) : index;
         setCurrentFrameIndex(nextIdx);
-        setSelectedEditFrame(nextIdx);
         if (newLen === 1) setActiveTab('convert');
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
+      // 繪製時間軸特效線條
       const renderTimelineCurves = (trackId, strokeColor) => {
         const keyframesData = frames.map((f, i) => ({ frame: f, idx: i })).filter(k => k.frame.keyframes[trackId]);
         if (keyframesData.length < 2) return null;
@@ -1003,6 +1005,31 @@
             paths.push(<path key={i} d={`M ${x1} ${y} L ${x2} ${y}`} fill="none" stroke={strokeColor} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />);
         }
         return paths;
+      };
+
+      // 繪製時間軸特效標籤(在HTML層)
+      const renderTimelineLabels = (trackId) => {
+        const keyframesData = frames.map((f, i) => ({ frame: f, idx: i })).filter(k => k.frame.keyframes[trackId]);
+        if (keyframesData.length < 2) return null;
+
+        const labels = [];
+        for (let i = 0; i < keyframesData.length - 1; i++) {
+            const k1 = keyframesData[i]; const k2 = keyframesData[i + 1];
+            const x1 = (k1.idx / (frames.length - 1)) * 100; const x2 = (k2.idx / (frames.length - 1)) * 100;
+            
+            let easingLabel = 'Lin';
+            const easing = k1.frame.easings[trackId];
+            if(easing === 'easeIn') easingLabel = 'In';
+            else if(easing === 'easeOut') easingLabel = 'Out';
+            else if(easing === 'easeInOut') easingLabel = 'In-Out';
+
+            labels.push(
+               <div key={`el-${i}`} className="absolute top-1/2 -translate-y-1/2 z-0 flex items-center justify-center pointer-events-none opacity-80" style={{ left: `${x1}%`, width: `${x2 - x1}%` }}>
+                  <div className="bg-white/90 text-[8px] font-bold px-1 rounded shadow-sm text-slate-500 scale-75 whitespace-nowrap">{easingLabel}</div>
+               </div>
+            );
+        }
+        return labels;
       };
 
       const getEstimatedSize = () => {
@@ -1022,8 +1049,8 @@
       const getExportCanvasForFrame = (index) => {
         const frame = frames[index]; 
         const orgW = frame.canvas.width; const orgH = frame.canvas.height;
-        const w = Math.round(orgW * exportScale);
-        const h = Math.round(orgH * exportScale);
+        const w = Math.max(1, Math.round(orgW * exportScale));
+        const h = Math.max(1, Math.round(orgH * exportScale));
 
         const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
         const ctx = tempCanvas.getContext('2d');
@@ -1243,7 +1270,7 @@
                          <span className="text-xs font-bold text-slate-600">所選停留:</span>
                          <input type="number" value={batchDelayInput} onChange={(e)=>setBatchDelayInput(Number(e.target.value))} className="w-16 border rounded px-1.5 py-0.5 text-sm" />
                          <span className="text-xs text-slate-500">ms</span>
-                         <button onClick={()=>applyBatchDelay(batchDelayInput, false)} disabled={selectedFrames.length===0} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50">設定</button>
+                         <button onClick={()=>applyBatchDelay(batchDelayInput, false)} disabled={selectedFrames.length===0} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50 shadow-sm">設定</button>
                          <div className="flex gap-1 ml-1">
                             <button onClick={()=>applyBatchDelay(50, true)} disabled={selectedFrames.length===0} className="text-xs bg-slate-200 px-1.5 py-1 rounded hover:bg-slate-300 disabled:opacity-50">+50</button>
                             <button onClick={()=>applyBatchDelay(-50, true)} disabled={selectedFrames.length===0} className="text-xs bg-slate-200 px-1.5 py-1 rounded hover:bg-slate-300 disabled:opacity-50">-50</button>
@@ -1252,8 +1279,8 @@
                       {/* 全局秒數調整 */}
                       <div className="flex items-center gap-2 border-l pl-6 border-slate-200">
                          <span className="text-xs font-bold text-slate-600">總長度 (等比例):</span>
-                         <button onClick={()=>adjustTotalSeconds(1)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">+1秒</button>
-                         <button onClick={()=>adjustTotalSeconds(-1)} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200">-1秒</button>
+                         <button onClick={()=>adjustTotalSeconds(1)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 shadow-sm">+1秒</button>
+                         <button onClick={()=>adjustTotalSeconds(-1)} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 shadow-sm">-1秒</button>
                          <span className="text-xs text-slate-500 bg-white px-2 py-0.5 border rounded">目前: {(frames.reduce((a,b)=>a+b.delay,0)/1000).toFixed(2)}s</span>
                       </div>
                     </div>
@@ -1268,7 +1295,7 @@
                            <div 
                               key={`grid-${i}-${f.delay}`}
                               className={`relative aspect-square bg-white border-2 rounded-lg p-1 flex flex-col items-center justify-between cursor-grab transition-all shadow-sm
-                                ${isSelected ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 ring-offset-1' : 'border-slate-300 hover:border-blue-300'}
+                                ${isSelected ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300 ring-offset-1 scale-105' : 'border-slate-300 hover:border-blue-300'}
                               `}
                               draggable
                               onClick={(e) => handleGridFrameClick(e, i)}
@@ -1297,28 +1324,35 @@
 
                   {frames.length > 0 ? (
                     <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-                      <canvas ref={canvasRef} className="max-w-full max-h-full object-contain drop-shadow-xl pointer-events-auto" />
-                      
-                      {/* 裁切覆蓋層 */}
-                      {isCropMode && (
-                        <div 
-                          ref={overlayRef}
-                          className="absolute inset-0 z-30 cursor-crosshair pointer-events-auto"
-                          onMouseDown={handleCropMouseDown}
-                        >
-                          <div className="absolute bg-blue-500/20 border-2 border-blue-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" 
-                               style={{
-                                 left: `${cropRect.x * (overlayRef.current ? overlayRef.current.getBoundingClientRect().width / frames[0].canvas.width : 1)}px`, 
-                                 top: `${cropRect.y * (overlayRef.current ? overlayRef.current.getBoundingClientRect().height / frames[0].canvas.height : 1)}px`, 
-                                 width: `${cropRect.w * (overlayRef.current ? overlayRef.current.getBoundingClientRect().width / frames[0].canvas.width : 1)}px`, 
-                                 height: `${cropRect.h * (overlayRef.current ? overlayRef.current.getBoundingClientRect().height / frames[0].canvas.height : 1)}px`
-                               }}
+                      {/* 精準對位裁切容器 */}
+                      <div className="relative pointer-events-auto" style={{ 
+                          aspectRatio: `${frames[0].canvas.width} / ${frames[0].canvas.height}`, 
+                          maxWidth: '100%', 
+                          maxHeight: '100%' 
+                        }}>
+                        <canvas ref={canvasRef} className="w-full h-full object-contain drop-shadow-xl" />
+                        
+                        {/* 裁切覆蓋層 */}
+                        {isCropMode && (
+                          <div 
+                            ref={overlayRef}
+                            className="absolute inset-0 z-30 cursor-crosshair pointer-events-auto"
+                            onMouseDown={handleCropMouseDown}
                           >
-                            <div className="absolute -top-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -top-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
-                            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
+                            <div className="absolute bg-blue-500/20 border-2 border-blue-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" 
+                                 style={{
+                                   left: `${(cropRect.x / frames[0].canvas.width) * 100}%`, 
+                                   top: `${(cropRect.y / frames[0].canvas.height) * 100}%`, 
+                                   width: `${(cropRect.w / frames[0].canvas.width) * 100}%`, 
+                                   height: `${(cropRect.h / frames[0].canvas.height) * 100}%`
+                                 }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -top-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
+                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className={`border-2 border-dashed border-slate-300 rounded-3xl p-8 md:p-16 text-center bg-white/60 shadow-sm w-full max-w-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50/50`} onClick={() => isAppReady && document.getElementById('file-upload').click()}>
@@ -1385,7 +1419,7 @@
                     <div className="relative h-10 bg-slate-300/30 rounded-sm border border-slate-300 flex items-center mb-2">
                       <span className="absolute -left-10 text-[9px] text-slate-500 font-bold z-20">影格</span>
                       {frames.map((frame, idx) => {
-                        const isSelected = selectedEditFrame === idx;
+                        const isSelected = currentFrameIndex === idx;
                         const isDragged = draggedFrameIdx === idx;
                         return (
                           <div 
@@ -1400,10 +1434,9 @@
                             onDragEnd={() => setDraggedFrameIdx(null)}
                             onMouseDown={(e) => { 
                               e.stopPropagation(); 
-                              setSelectedEditFrame(idx); 
                               setCurrentFrameIndex(idx); 
                               setIsPlaying(false); 
-                              setActiveTab('frame'); 
+                              setActiveTab('edit'); 
                             }}
                           >
                             <FrameThumbnail sourceCanvas={frame.canvas} />
@@ -1434,22 +1467,20 @@
                             {renderTimelineCurves(track.id, track.stroke)}
                           </svg>
 
+                          {renderTimelineLabels(track.id)}
+
                           {frames.map((frame, idx) => {
                             if (!frame.keyframes[track.id]) return null;
-                            const isSelected = selectedEditFrame === idx;
                             const isKeyframeSelected = selectedKeyframe?.idx === idx && selectedKeyframe?.trackId === track.id;
                             
                             return (
                               <div 
                                 key={idx} 
                                 className={`absolute top-1/2 -mt-1.5 w-3 h-3 rotate-45 transform -translate-x-1/2 cursor-grab active:cursor-grabbing hover:scale-125 transition-all z-10 
-                                  ${isKeyframeSelected ? 'bg-red-500 border border-red-700 shadow-[0_0_8px_rgba(239,68,68,0.8)] scale-125' : 
-                                   (isSelected ? 'bg-orange-500 border border-orange-700 shadow-[0_0_5px_rgba(249,115,22,0.8)]' : 
-                                   `${track.color} border ${track.border} shadow-sm`)}
-                                `}
+                                  ${isKeyframeSelected ? 'bg-red-500 border border-red-700 shadow-[0_0_8px_rgba(239,68,68,0.8)] scale-125' : `${track.color} border ${track.border} shadow-sm`}`}
                                 style={{ left: `${(idx / (frames.length - 1)) * 100}%` }}
                                 onMouseDown={(e) => {
-                                   setSelectedEditFrame(idx); setCurrentFrameIndex(idx); setIsPlaying(false); setActiveTab('frame');
+                                   setCurrentFrameIndex(idx); setIsPlaying(false); setActiveTab('edit');
                                    setSelectedKeyframe({ idx, trackId: track.id });
                                    handleKeyframeDrag(e, idx, track.id);
                                 }}
@@ -1463,7 +1494,7 @@
                     
                     {!TRACKS_INFO.some(t => frames.some(f => f.keyframes[t.id])) && (
                       <div className="w-full text-center text-[10px] text-slate-400 mt-2 font-medium">
-                         ~ 目前沒有特效關鍵影格，可由右側【漸變】或【單格】面板增加效果 ~
+                         ~ 目前沒有特效關鍵影格，可由右側【編輯特效】面板增加漸變 ~
                       </div>
                     )}
                   </div>
@@ -1502,8 +1533,7 @@
                   {frames.length > 1 && (
                     <>
                       <button onClick={() => setActiveTab('global')} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'global' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-100 border-b-2 border-transparent'}`}><Globe className="w-4 h-4" /> 全域</button>
-                      <button onClick={() => setActiveTab('gradient')} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'gradient' ? 'text-purple-600 bg-white border-b-2 border-purple-600' : 'text-slate-500 hover:bg-slate-100 border-b-2 border-transparent'}`}><Sparkles className="w-4 h-4" /> 漸變</button>
-                      <button onClick={() => { setActiveTab('frame'); setIsPlaying(false); }} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'frame' ? 'text-blue-600 bg-white border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-100 border-b-2 border-transparent'}`}><Layers className="w-4 h-4" /> 單格</button>
+                      <button onClick={() => { setActiveTab('edit'); setIsPlaying(false); }} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'edit' ? 'text-purple-600 bg-white border-b-2 border-purple-600' : 'text-slate-500 hover:bg-slate-100 border-b-2 border-transparent'}`}><Sparkles className="w-4 h-4" /> 編輯特效</button>
                     </>
                   )}
                 </div>
@@ -1539,6 +1569,29 @@
                   {activeTab === 'global' && frames.length > 1 && (
                     <div className="space-y-6">
                       <section>
+                        <h2 className="text-xs font-bold text-slate-500 uppercase mb-3"><Clock className="w-3 h-3 inline mr-1"/> 影格時間控制</h2>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                           <div className="flex items-center gap-2 mb-3">
+                               <span className="text-[11px] font-bold text-slate-600">總長度增減:</span>
+                               <button onClick={()=>adjustTotalSeconds(1)} className="flex-1 py-1.5 text-xs bg-green-100 text-green-700 font-bold rounded hover:bg-green-200 shadow-sm">+1秒</button>
+                               <button onClick={()=>adjustTotalSeconds(-1)} className="flex-1 py-1.5 text-xs bg-orange-100 text-orange-700 font-bold rounded hover:bg-orange-200 shadow-sm">-1秒</button>
+                           </div>
+                           <div className="flex items-center gap-2 pt-3 border-t border-slate-200">
+                               <span className="text-[11px] font-bold text-slate-600">所有影格停留時間:</span>
+                               <input type="number" id="globalDelayInput" defaultValue={100} className="w-14 border border-slate-300 px-1 py-1 text-[11px] rounded" />
+                               <span className="text-[10px] text-slate-500">ms</span>
+                               <button onClick={()=>{
+                                   const val = Number(document.getElementById('globalDelayInput').value);
+                                   if(val >= 10) {
+                                       isRestoring.current = true;
+                                       setFrames(prev => prev.map(f => ({...f, delay: val})));
+                                       setTimeout(() => { isRestoring.current = false; }, 50);
+                                   }
+                               }} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 shadow-sm font-bold ml-auto">套用</button>
+                           </div>
+                        </div>
+                      </section>
+                      <section>
                         <h2 className="text-xs font-bold text-slate-500 uppercase mb-3"><FlipHorizontal className="w-3 h-3 inline mr-1"/> 翻轉 (Flip)</h2>
                         <div className="flex gap-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
                           <button onClick={() => setGlobalFlipX(!globalFlipX)} className={`flex-1 py-2 text-xs font-bold rounded flex items-center justify-center transition-colors shadow-sm ${globalFlipX ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-300 text-slate-600'}`}><FlipHorizontal className="w-4 h-4 mr-1"/> 水平翻轉</button>
@@ -1572,131 +1625,156 @@
                     </div>
                   )}
 
-                  {/* ====== 漸變分頁 ====== */}
-                  {activeTab === 'gradient' && frames.length > 1 && (
-                    <div className="space-y-4 animate-fade-in">
-                      <div className="flex items-center justify-between px-1 border-b pb-2 border-slate-200">
-                        <span className="text-[11px] font-bold text-slate-600">漸變曲線 (Easing)</span>
-                        <select value={gradEasing} onChange={(e) => setGradEasing(e.target.value)} className="px-2 py-1 rounded border border-slate-300 text-[11px] focus:outline-none font-bold text-purple-700 bg-white">
-                          <option value="linear">線性 (Linear)</option>
-                          <option value="easeIn">漸快 (Ease In)</option>
-                          <option value="easeOut">漸慢 (Ease Out)</option>
-                          <option value="easeInOut">平滑 (Ease In Out)</option>
-                        </select>
+                  {/* ====== 編輯特效(整合單格與漸變) 分頁 ====== */}
+                  {activeTab === 'edit' && frames.length > 1 && (
+                    <div className="space-y-4 animate-fade-in pb-8">
+                      {/* Track Selector */}
+                      <div className="flex gap-1 p-1 bg-slate-200/50 rounded-lg flex-wrap shadow-inner">
+                         {['opacity', 'scale', 'rotate', 'translate', 'color'].map(t => (
+                            <button key={t} onClick={()=>setGradType(t)} className={`flex-1 min-w-[50px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType===t?'bg-white text-blue-700 border border-blue-200':'text-slate-500 hover:bg-slate-200'}`}>
+                               {TRACKS_INFO.find(x=>x.id===t).label}
+                            </button>
+                         ))}
                       </div>
 
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 shadow-sm">
-                        <div className="flex gap-2 p-1 bg-slate-200/50 rounded-lg flex-wrap">
-                           <button onClick={()=>setGradType('opacity')} className={`flex-1 min-w-[60px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType==='opacity'?'bg-white text-purple-700 border border-purple-200':'text-slate-500 hover:bg-slate-200'}`}>透明度</button>
-                           <button onClick={()=>setGradType('scale')} className={`flex-1 min-w-[60px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType==='scale'?'bg-white text-purple-700 border border-purple-200':'text-slate-500 hover:bg-slate-200'}`}>縮放</button>
-                           <button onClick={()=>setGradType('rotate')} className={`flex-1 min-w-[60px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType==='rotate'?'bg-white text-purple-700 border border-purple-200':'text-slate-500 hover:bg-slate-200'}`}>旋轉</button>
-                           <button onClick={()=>setGradType('translate')} className={`flex-1 min-w-[60px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType==='translate'?'bg-white text-purple-700 border border-purple-200':'text-slate-500 hover:bg-slate-200'}`}>位移</button>
-                        </div>
+                      {/* Section A: Current Frame Control */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                         <div className="absolute top-0 left-0 w-1 h-full" style={{backgroundColor: TRACKS_INFO.find(x=>x.id===gradType)?.stroke}}></div>
+                         
+                         <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+                            <span className="text-[12px] font-black text-slate-700 px-2 py-1 bg-white rounded shadow-sm border border-slate-200">第 {currentFrameIndex} 格</span>
+                            {(() => {
+                               const hasKeyframeCurrent = frames[currentFrameIndex]?.keyframes[gradType];
+                               return (
+                                 <button 
+                                    onClick={() => {
+                                       if (hasKeyframeCurrent) {
+                                          isRestoring.current = true;
+                                          setFrames(prev => {
+                                             const newF = [...prev];
+                                             newF[currentFrameIndex] = {...newF[currentFrameIndex], keyframes: {...newF[currentFrameIndex].keyframes, [gradType]: false}};
+                                             return newF;
+                                          });
+                                          if (selectedKeyframe?.idx === currentFrameIndex && selectedKeyframe?.trackId === gradType) setSelectedKeyframe(null);
+                                          setTimeout(() => { isRestoring.current = false; }, 50);
+                                       } else {
+                                          handleAddKeyframeCurrent(gradType);
+                                       }
+                                    }} 
+                                    className={`text-[10px] px-3 py-1.5 rounded font-bold flex items-center transition-colors shadow-sm ${hasKeyframeCurrent ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                    {hasKeyframeCurrent ? <><X className="w-3 h-3 mr-1"/> 移除節點</> : <><Plus className="w-3 h-3 mr-1"/> 插入節點</>}
+                                 </button>
+                               );
+                            })()}
+                         </div>
+
+                         <div className="space-y-4 mb-4">
+                            {gradType === 'opacity' && <FilterSliderWithInput value={frames[currentFrameIndex].customFilters.opacity * 100} min={0} max={100} onChange={(v) => updateFrameFilter('opacity', v / 100)} />}
+                            {gradType === 'scale' && <FilterSliderWithInput value={frames[currentFrameIndex].customFilters.scale * 100} min={0} max={500} onChange={(v) => updateFrameFilter('scale', v / 100)} />}
+                            {gradType === 'rotate' && <FilterSliderWithInput value={frames[currentFrameIndex].customFilters.rotate || 0} min={-360} max={360} onChange={(v) => updateFrameFilter('rotate', v)} />}
+                            {gradType === 'translate' && (
+                               <>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-8">X 軸</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.translateX || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateX', v)} /></div>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-8">Y 軸</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.translateY || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateY', v)} /></div>
+                               </>
+                            )}
+                            {gradType === 'color' && (
+                               <>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-10">色相</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.hue} min={0} max={360} onChange={(v) => updateFrameFilter('hue', v)} /></div>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-10">飽和度</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.saturation} min={0} max={200} onChange={(v) => updateFrameFilter('saturation', v)} /></div>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-10">亮度</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.brightness} min={0} max={200} onChange={(v) => updateFrameFilter('brightness', v)} /></div>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-10">對比度</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.contrast} min={0} max={200} onChange={(v) => updateFrameFilter('contrast', v)} /></div>
+                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-500 w-10">負片</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.invert || 0} min={0} max={100} onChange={(v) => updateFrameFilter('invert', v)} /></div>
+                               </>
+                            )}
+                         </div>
+
+                         {/* 獨立調整前往下一個節點的速度 */}
+                         <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                            <span className="text-[10px] font-bold text-slate-600">前往下個節點的曲線速度:</span>
+                            <select value={frames[currentFrameIndex].easings[gradType]} onChange={(e) => {
+                                isRestoring.current = true;
+                                setFrames(prev => {
+                                   const newF = [...prev];
+                                   newF[currentFrameIndex] = {...newF[currentFrameIndex], easings: {...newF[currentFrameIndex].easings, [gradType]: e.target.value}};
+                                   return newF;
+                                });
+                                setTimeout(() => { isRestoring.current = false; }, 50);
+                            }} className="px-2 py-1 rounded border border-slate-300 text-[11px] focus:outline-none font-bold text-blue-700 bg-white">
+                               <option value="linear">線性 (Linear)</option>
+                               <option value="easeIn">漸快 (Ease In)</option>
+                               <option value="easeOut">漸慢 (Ease Out)</option>
+                               <option value="easeInOut">平滑 (Ease In Out)</option>
+                            </select>
+                         </div>
+                      </div>
+
+                      {/* Section B: Batch Auto Generator */}
+                      <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 shadow-sm relative">
+                        <span className="text-[11px] font-bold text-purple-800 mb-3 block">快速產生整段漸變 (將覆寫所有節點)</span>
                         
-                        {/* 加入/移除當前關鍵影格按鈕 */}
-                        {(() => {
-                           const hasKeyframeCurrent = frames[currentFrameIndex]?.keyframes[gradType];
-                           const trackLabel = TRACKS_INFO.find(t=>t.id===gradType)?.label;
-                           return (
-                             <div className="flex justify-between items-center bg-white p-2 rounded-lg shadow-sm border border-slate-200">
-                               <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                                 第 {currentFrameIndex} 格
-                                 {hasKeyframeCurrent && <span className="text-green-600 ml-1 text-[10px]">(有節點)</span>}
-                               </span>
-                               <button 
-                                  onClick={() => {
-                                     if (hasKeyframeCurrent) {
-                                        isRestoring.current = true;
-                                        setFrames(prev => {
-                                           const newF = [...prev];
-                                           newF[currentFrameIndex] = {...newF[currentFrameIndex], keyframes: {...newF[currentFrameIndex].keyframes, [gradType]: false}};
-                                           return newF;
-                                        });
-                                        if (selectedKeyframe?.idx === currentFrameIndex && selectedKeyframe?.trackId === gradType) setSelectedKeyframe(null);
-                                        setTimeout(() => { isRestoring.current = false; }, 50);
-                                     } else {
-                                        handleAddKeyframeCurrent(gradType);
-                                     }
-                                  }} 
-                                  className={`text-[10px] px-3 py-1.5 rounded font-bold flex items-center transition-colors shadow-sm ${hasKeyframeCurrent ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}>
-                                  {hasKeyframeCurrent ? <><X className="w-3 h-3 mr-1"/> 移除此處節點</> : <><Plus className="w-3 h-3 mr-1"/> 插入{trackLabel}節點</>}
-                               </button>
-                             </div>
-                           );
-                        })()}
+                        <div className="flex items-center justify-between mb-4 bg-white/50 p-2 rounded border border-purple-100">
+                           <span className="text-[10px] font-bold text-slate-600">生成使用之曲線:</span>
+                           <select value={gradEasing} onChange={(e) => setGradEasing(e.target.value)} className="px-2 py-1 rounded border border-purple-200 text-[10px] focus:outline-none font-bold text-purple-700 bg-white">
+                             <option value="linear">線性 (Linear)</option>
+                             <option value="easeIn">漸快 (Ease In)</option>
+                             <option value="easeOut">漸慢 (Ease Out)</option>
+                             <option value="easeInOut">平滑 (Ease In Out)</option>
+                           </select>
+                        </div>
 
                         {gradType === 'opacity' && (
-                          <div className="space-y-4 animate-fade-in border-t border-slate-200 pt-3">
+                          <div className="space-y-4 animate-fade-in">
                             <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">目標透明度 (%)</label><FilterSliderWithInput value={gradOpacityTarget} min={0} max={100} onChange={setGradOpacityTarget} /></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-200">
-                              <button onClick={() => triggerExplicitGradient('opacity_fadeTo')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">100% 淡出至目標</button>
-                              <button onClick={() => triggerExplicitGradient('opacity_fadeFrom')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">目標 淡入至 100%</button>
-                              <button onClick={() => triggerExplicitGradient('opacity_pulse')} className="col-span-2 py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">呼吸閃爍 (100% -> 目標 -> 100%)</button>
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                              <button onClick={() => triggerExplicitGradient('opacity_fadeTo')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">100% 淡出至目標</button>
+                              <button onClick={() => triggerExplicitGradient('opacity_fadeFrom')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">目標 淡入至 100%</button>
+                              <button onClick={() => triggerExplicitGradient('opacity_pulse')} className="col-span-2 py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">呼吸閃爍 (100% -> 目標 -> 100%)</button>
                             </div>
                           </div>
                         )}
                         
                         {gradType === 'scale' && (
-                          <div className="space-y-4 animate-fade-in border-t border-slate-200 pt-3">
+                          <div className="space-y-4 animate-fade-in">
                             <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">起點比例 (%)</label><FilterSliderWithInput value={gradScaleStart} min={0} max={500} onChange={setGradScaleStart} /></div>
                             <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">終點比例 (%)</label><FilterSliderWithInput value={gradScaleEnd} min={0} max={500} onChange={setGradScaleEnd} /></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-200">
-                              <button onClick={() => triggerExplicitGradient('scale_to')} className="col-span-2 py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">縮放至終點比例</button>
-                              <button onClick={() => triggerExplicitGradient('scale_pulse')} className="col-span-2 py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">呼吸縮放 (起 -> 終 -> 起)</button>
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                              <button onClick={() => triggerExplicitGradient('scale_to')} className="col-span-2 py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">縮放至終點比例</button>
+                              <button onClick={() => triggerExplicitGradient('scale_pulse')} className="col-span-2 py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">呼吸縮放 (起 -> 終 -> 起)</button>
                             </div>
                           </div>
                         )}
 
                         {gradType === 'rotate' && (
-                          <div className="space-y-4 animate-fade-in border-t border-slate-200 pt-3">
+                          <div className="space-y-4 animate-fade-in">
                             <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">起點角度 (°)</label><FilterSliderWithInput value={gradRotStart} min={-360} max={360} onChange={setGradRotStart} /></div>
                             <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">終點角度 (°)</label><FilterSliderWithInput value={gradRotEnd} min={-360} max={360} onChange={setGradRotEnd} /></div>
-                            
-                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-200">
-                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">順時針一圈</button>
-                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(-360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">逆時針一圈</button>
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">順時針一圈</button>
+                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(-360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">逆時針一圈</button>
                             </div>
                           </div>
                         )}
 
                         {gradType === 'translate' && (
-                          <div className="space-y-4 animate-fade-in border-t border-slate-200 pt-3">
-                            <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">X 軸 終點偏移 (px) - <span className="text-purple-500">起點預設為 0</span></label><FilterSliderWithInput value={gradMoveEndX} min={-2000} max={2000} onChange={setGradMoveEndX} /></div>
-                            <div className="border-t border-slate-200"></div>
-                            <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">Y 軸 終點偏移 (px) - <span className="text-purple-500">起點預設為 0</span></label><FilterSliderWithInput value={gradMoveEndY} min={-2000} max={2000} onChange={setGradMoveEndY} /></div>
+                          <div className="space-y-4 animate-fade-in">
+                            <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">X 軸 終點偏移 (px) - 起點預設為0</label><FilterSliderWithInput value={gradMoveEndX} min={-2000} max={2000} onChange={setGradMoveEndX} /></div>
+                            <div className="border-t border-purple-200"></div>
+                            <div><label className="text-[10px] font-bold text-slate-600 mb-1 block">Y 軸 終點偏移 (px) - 起點預設為0</label><FilterSliderWithInput value={gradMoveEndY} min={-2000} max={2000} onChange={setGradMoveEndY} /></div>
 
-                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-200">
-                               <button onClick={() => handleQuickMove('right')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向右移出畫布</button>
-                               <button onClick={() => handleQuickMove('left')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向左移出畫布</button>
-                               <button onClick={() => handleQuickMove('down')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向下落出畫布</button>
-                               <button onClick={() => handleQuickMove('up')} className="py-2 bg-white border border-slate-300 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向上飛出畫布</button>
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                               <button onClick={() => handleQuickMove('right')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向右移出畫布</button>
+                               <button onClick={() => handleQuickMove('left')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向左移出畫布</button>
+                               <button onClick={() => handleQuickMove('down')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向下落出畫布</button>
+                               <button onClick={() => handleQuickMove('up')} className="py-2 bg-white border border-purple-200 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 hover:text-purple-600 transition-colors">向上飛出畫布</button>
                             </div>
                           </div>
                         )}
-                        <button onClick={() => triggerExplicitGradient(`${gradType}_reset`)} className="w-full mt-2 py-2 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors">清除此軌道所有特效 (Reset)</button>
+                        <button onClick={() => triggerExplicitGradient(`${gradType}_reset`)} className="w-full mt-3 py-2 bg-white/50 text-slate-500 border border-slate-300 text-xs font-bold rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors shadow-sm">清除此軌道所有特效 (Reset)</button>
                       </div>
                     </div>
                   )}
 
-                  {/* ====== 單格分頁 ====== */}
-                  {activeTab === 'frame' && frames.length > 1 && (
-                    <div className="space-y-4 animate-fade-in">
-                      <div className="bg-blue-50 text-blue-700 p-2 rounded text-[11px] font-medium text-center border border-blue-100 shadow-sm">
-                        正在編輯第 {selectedEditFrame + 1} 格
-                      </div>
-                      <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <div><label className="text-[10px] font-bold text-blue-700">獨立透明度 (%)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.opacity * 100} min={0} max={100} onChange={(v) => updateFrameFilter('opacity', v / 100)} /></div>
-                        <div><label className="text-[10px] font-bold text-pink-600">獨立比例 (%)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.scale * 100} min={0} max={500} onChange={(v) => updateFrameFilter('scale', v / 100)} /></div>
-                        <div><label className="text-[10px] font-bold text-green-700">獨立旋轉 (°)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.rotate || 0} min={-360} max={360} onChange={(v) => updateFrameFilter('rotate', v)} /></div>
-                        <div><label className="text-[10px] font-bold text-blue-700">獨立 X 偏移 (px)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.translateX || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateX', v)} /></div>
-                        <div><label className="text-[10px] font-bold text-blue-700">獨立 Y 偏移 (px)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.translateY || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateY', v)} /></div>
-                        <div className="border-t border-slate-200 my-2"></div>
-                        <div><label className="text-[10px] font-bold text-orange-600">獨立負片 (%)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.invert || 0} min={0} max={100} onChange={(v) => updateFrameFilter('invert', v)} /></div>
-                        <div><label className="text-[10px] font-bold text-orange-600">獨立色相 (°)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.hue} min={0} max={360} onChange={(v) => updateFrameFilter('hue', v)} /></div>
-                        <div><label className="text-[10px] font-bold text-orange-600">獨立飽和度 (%)</label><FilterSliderWithInput value={frames[selectedEditFrame].customFilters.saturation} min={0} max={200} onChange={(v) => updateFrameFilter('saturation', v)} /></div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* 匯出面板置底 */}
@@ -1713,11 +1791,11 @@
                       </div>
                       <div className="flex items-center gap-2">
                          <select value={exportScale} onChange={(e) => setExportScale(parseFloat(e.target.value))} className="flex-1 px-2 py-1.5 rounded border border-slate-300 text-[11px] font-medium text-slate-700 bg-white">
-                           <option value={1.0}>100% 尺寸 (無壓縮)</option>
+                           <option value={1.0}>100% 尺寸 (無縮放)</option>
                            <option value={0.75}>75% 尺寸 (有效縮小檔案)</option>
                            <option value={0.5}>50% 尺寸 (大幅縮小檔案)</option>
                          </select>
-                         <span className="text-[10px] bg-white px-2 py-1.5 border border-slate-200 rounded font-mono text-blue-600 min-w-[70px] text-center">預估 {formatBytes(getEstimatedSize())}</span>
+                         <span className="text-[10px] bg-white px-2 py-1.5 border border-slate-200 rounded font-mono text-blue-600 min-w-[70px] text-center shadow-sm">預估 {formatBytes(getEstimatedSize())}</span>
                       </div>
                     </div>
                   )}
@@ -1726,8 +1804,8 @@
                       <Download className="w-4 h-4" /> 匯出 APNG
                     </button>
                     {frames.length > 1 && (
-                      <button onClick={handleDownloadZip} disabled={isExporting} className="w-full py-1.5 bg-white text-slate-700 border border-slate-300 rounded text-[11px] font-bold hover:bg-slate-100 disabled:opacity-50 transition-colors">
-                         打包 ZIP
+                      <button onClick={handleDownloadZip} disabled={isExporting} className="w-full py-1.5 bg-white text-slate-700 border border-slate-300 rounded text-[11px] font-bold hover:bg-slate-100 disabled:opacity-50 transition-colors shadow-sm">
+                         打包 ZIP 原始影格
                       </button>
                     )}
                   </div>
@@ -1775,7 +1853,7 @@
       return (
         <div className="flex items-center gap-3">
           <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="flex-1 accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-          <input type="number" value={displayVal} onChange={handleInputChange} onBlur={handleBlur} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 rounded font-mono text-slate-700 focus:outline-none focus:border-blue-500 shrink-0" />
+          <input type="number" value={displayVal} onChange={handleInputChange} onBlur={handleBlur} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 rounded font-mono text-slate-700 focus:outline-none focus:border-blue-500 shrink-0 shadow-inner" />
         </div>
       );
     }
