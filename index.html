@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>APNG 編輯器</title>
+  <title>動態影像編輯器</title>
   <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 載入 Babel -->
@@ -901,7 +901,7 @@
 
               {/* ===== 多軌道 AE Style 關鍵影格時間軸 ===== */}
               {frames.length > 1 && !isCropMode && (
-                <div className="h-[150px] bg-[#f8f9fa] border-t border-slate-200 shrink-0 flex flex-col shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] z-20 select-none relative overflow-y-auto custom-scrollbar">
+                <div className="h-[200px] bg-[#f8f9fa] border-t border-slate-200 shrink-0 flex flex-col shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] z-20 select-none relative overflow-y-auto custom-scrollbar">
                   
                   {/* 上方：影格數字標尺 */}
                   <div className="h-6 border-b border-slate-200 flex relative overflow-hidden px-12 bg-white sticky top-0 z-30">
@@ -920,8 +920,29 @@
                   <div className="flex-1 relative px-12 py-2 flex flex-col gap-1" ref={timelineTrackRef} onMouseDown={handleTimelineMouseDown}>
                     
                     {/* 紅色播放指標 (貫穿所有軌道) */}
-                    <div className="absolute top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none" style={{ left: `calc(3rem + ${(currentFrameIndex / (frames.length - 1)) * 100}%)` }}>
+                    <div className="absolute top-0 bottom-0 w-px bg-red-500 z-40 pointer-events-none" style={{ left: `calc(3rem + ${(currentFrameIndex / (frames.length - 1)) * 100}%)` }}>
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] border-t-red-500"></div>
+                    </div>
+
+                    {/* 影格預覽 (Filmstrip) 軌道 */}
+                    <div className="relative h-10 bg-slate-300/30 rounded-sm border border-slate-300 flex items-center mb-2">
+                      <span className="absolute -left-10 text-[9px] text-slate-500 font-bold z-20">影格</span>
+                      {frames.map((frame, idx) => {
+                        const isSelected = selectedEditFrame === idx;
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`absolute top-0 bottom-0 flex items-center justify-center transition-all ${isSelected ? 'border-2 border-blue-500 bg-blue-500/20 z-10 scale-110 shadow-md' : 'opacity-80'}`}
+                            style={{ 
+                              left: `calc(${(idx / (frames.length - 1)) * 100}% - 14px)`, 
+                              width: '28px' 
+                            }}
+                            title={`第 ${idx} 格`}
+                          >
+                            <FrameThumbnail sourceCanvas={frame.canvas} />
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* 映射每一個軌道 */}
@@ -1222,6 +1243,24 @@
         </div>
       );
     }
+
+    // 將原圖經過計算並繪製到小畫布上，使用 React.memo 確保效能
+    const FrameThumbnail = React.memo(({ sourceCanvas }) => {
+      const ref = React.useRef(null);
+      React.useEffect(() => {
+        if (ref.current && sourceCanvas) {
+          const ctx = ref.current.getContext('2d', { willReadFrequently: true });
+          const w = ref.current.width;
+          const h = ref.current.height;
+          ctx.clearRect(0, 0, w, h);
+          const scale = Math.min(w / sourceCanvas.width, h / sourceCanvas.height);
+          const sw = sourceCanvas.width * scale;
+          const sh = sourceCanvas.height * scale;
+          ctx.drawImage(sourceCanvas, (w - sw) / 2, (h - sh) / 2, sw, sh);
+        }
+      }, [sourceCanvas]);
+      return <canvas ref={ref} width={32} height={32} className="w-full h-full object-contain pointer-events-none drop-shadow-sm" />;
+    });
 
     const root = createRoot(document.getElementById('root'));
     root.render(<App />);
