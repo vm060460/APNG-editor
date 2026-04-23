@@ -27,7 +27,7 @@
       AlertCircle, Archive, Layers, Globe, Undo2, Redo2, 
       Sparkles, Move, RotateCw, Eraser, Crop, Wand2, Settings2,
       SlidersHorizontal, Clock, AlignLeft, AlignCenter, AlignRight, X, ImagePlus, LayoutGrid, Monitor,
-      FlipHorizontal, FlipVertical, Copy, ArrowLeftRight, Keyboard, Plus, Moon, Sun, Languages, Info
+      FlipHorizontal, FlipVertical, Copy, ArrowLeftRight, Keyboard, Plus, Moon, Sun, Languages, Info, FileOutput
     } from 'https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0';
 
     let parseGIF, decompressFrames, UPNG, fflate;
@@ -48,13 +48,16 @@
         easing: '漸變曲線 (Easing)', linear: '線性 (Linear)', easeIn: '漸快 (Ease In)', easeOut: '漸慢 (Ease Out)', easeInOut: '平滑 (Ease In Out)',
         currFrame: '第 {n} 格', rmNode: '移除節點', addNode: '插入節點', nextEasing: '前往下個節點的曲線速度',
         autoGen: '快速產生整段漸變 (將覆寫所有節點)', genEasing: '生成使用之曲線', clearTrack: '清除此軌道所有特效',
-        exportFmt: '匯出格式', estSize: '預估', exportBtn: '匯出 APNG', exportZip: '打包 ZIP 原始影格', globalCtrl: '總體控制', loop: '循環', speed: '倍速',
+        exportSettingsBtn: '匯出 / 下載', exportSettingsTitle: '匯出設定', format: '匯出格式',
+        colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF / JPEG 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
+        origFrames: '維持原始影格數', customFrames: '自訂輸出影格數', framesUnit: '格 (自動平滑重採樣)',
+        exporting: '處理與編碼中...', confirmExport: '確認匯出', exportFailed: '匯出失敗，請重試。',
+        fmtApng: 'APNG (高畫質動態PNG)', fmtGif: 'GIF (相容性最佳動圖)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
+        compLossless: '0 (無失真 / 最高畫質)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
+        size100: '100% (原始尺寸)', size75: '75% (有效縮小檔案)', size50: '50% (大幅縮小檔案)', size25: '25% (極小預覽)',
         none: '無 (不處理)', green: '去除綠幕', black: '去除純黑', white: '去除純白', customColor: '自訂顏色',
-        fmtApng: 'APNG (動畫圖片)', fmtZipPng: 'ZIP (PNG 序列)', fmtZipJpg: 'ZIP (JPEG 序列/帶白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
-        compLossless: '無失真 (最高畫質)', comp256: '256色 (高畫質)', comp128: '128色 (中等畫質)', comp64: '64色 (低畫質極小檔)',
-        size100: '100% 尺寸 (無縮放)', size75: '75% 尺寸 (有效縮小)', size50: '50% 尺寸 (大幅縮小)',
         noKfs: '~ 目前沒有特效關鍵影格，可由右側【編輯特效】面板增加漸變 ~', trackFrame: '影格',
-        addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格'
+        addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格', loop: '循環', speed: '倍速', globalCtrl: '總體控制'
       },
       'en': {
         title: 'Motion Image Editor', author: 'Author: QueXue, X:@vm060460', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
@@ -70,13 +73,16 @@
         easing: 'Easing Curve', linear: 'Linear', easeIn: 'Ease In', easeOut: 'Ease Out', easeInOut: 'Ease In Out',
         currFrame: 'Frame {n}', rmNode: 'Remove Node', addNode: 'Add Node', nextEasing: 'Easing to next node',
         autoGen: 'Auto Generate Gradient (Overwrites track)', genEasing: 'Generation Easing', clearTrack: 'Reset Track Effects',
-        exportFmt: 'Export Format', estSize: 'Est.', exportBtn: 'Export APNG', exportZip: 'Export ZIP Frames', globalCtrl: 'Global Control', loop: 'Loop', speed: 'Speed',
+        exportSettingsBtn: 'Export / Download', exportSettingsTitle: 'Export Settings', format: 'Format',
+        colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG)', outScale: 'Output Scale', outFrames: 'Output Frames',
+        origFrames: 'Keep Original Frame Count', customFrames: 'Custom Frame Count', framesUnit: 'frames (Auto-resample)',
+        exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Export failed.',
+        fmtApng: 'APNG (High Quality)', fmtGif: 'GIF (Best Compatibility)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
+        compLossless: 'Lossless (Best Quality)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
+        size100: '100% Size', size75: '75% Size', size50: '50% Size', size25: '25% Size',
         none: 'None', green: 'Remove Green', black: 'Remove Black', white: 'Remove White', customColor: 'Custom Color',
-        fmtApng: 'APNG (Animated PNG)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG / White BG)', fmtZipWebp: 'ZIP (WebP / High Comp.)',
-        compLossless: 'Lossless (Best)', comp256: '256 Colors (High)', comp128: '128 Colors (Med)', comp64: '64 Colors (Low/Tiny)',
-        size100: '100% Size', size75: '75% Size (Reduced)', size50: '50% Size (Tiny)',
         noKfs: '~ No keyframes yet. Add them in the [Edit FX] panel. ~', trackFrame: 'Frames',
-        addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames'
+        addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames', loop: 'Loop', speed: 'Speed', globalCtrl: 'Global Control'
       },
       'ja': {
         title: '動的画像エディタ', author: '作成者: 闕雪, X:@vm060460', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
@@ -92,19 +98,22 @@
         easing: 'イージング曲線', linear: 'リニア', easeIn: 'イーズイン', easeOut: 'イーズアウト', easeInOut: 'イーズインアウト',
         currFrame: '第 {n} フレーム', rmNode: 'ノード削除', addNode: 'ノード追加', nextEasing: '次のノードへのイージング',
         autoGen: '一括グラデーション生成 (上書き)', genEasing: '生成のイージング', clearTrack: 'このトラックをリセット',
-        exportFmt: 'エクスポート形式', estSize: '予想', exportBtn: 'APNG 出力', exportZip: 'ZIP フレーム出力', globalCtrl: '全体制御', loop: 'ループ', speed: '倍速',
+        exportSettingsBtn: 'エクスポート', exportSettingsTitle: 'エクスポート設定', format: '形式',
+        colors: '色数と圧縮', bgColor: '背景色 (GIF/JPEG用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
+        origFrames: '元のフレーム数を維持', customFrames: 'カスタムフレーム数', framesUnit: 'フレーム (自動補間)',
+        exporting: 'エンコード中...', confirmExport: 'エクスポート実行', exportFailed: '失敗しました。',
+        fmtApng: 'APNG (高品質)', fmtGif: 'GIF (高互換性)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
+        compLossless: 'ロスレス (最高画質)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
+        size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: 'なし', green: '緑を透過', black: '黒を透過', white: '白を透過', customColor: 'カスタム色',
-        fmtApng: 'APNG (アニメーションPNG)', fmtZipPng: 'ZIP (PNG シーケンス)', fmtZipJpg: 'ZIP (JPEG シーケンス)', fmtZipWebp: 'ZIP (WebP / 高圧縮)',
-        compLossless: 'ロスレス (最高画質)', comp256: '256色 (高画質)', comp128: '128色 (中画質)', comp64: '64色 (低画質/最小)',
-        size100: '100% サイズ', size75: '75% サイズ (縮小)', size50: '50% サイズ (大幅縮小)',
         noKfs: '〜 キーフレームがありません。[エフェクト編集]パネルで追加してください 〜', trackFrame: 'フレーム',
-        addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入'
+        addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入', loop: 'ループ', speed: '倍速', globalCtrl: '全体制御'
       },
       'ko': {
         title: '동적 이미지 편집기', author: '작성자: 闕雪, X:@vm060460', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
         delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/애니 가져오기', dragDrop: '드래그 앤 드롭',
         gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
-        selected: '선택됨', frames: '프레임', selectAll: '모두 선택', 모deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
+        selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
         alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효과 편집',
         animLength: '애니메이션 길이', autoFx: '자동 효과', sec: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
@@ -114,13 +123,16 @@
         easing: '이징 곡선', linear: '선형', easeIn: '이즈 인', easeOut: '이즈 아웃', easeInOut: '이즈 인 아웃',
         currFrame: '{n} 프레임', rmNode: '노드 제거', addNode: '노드 추가', nextEasing: '다음 노드로의 이징',
         autoGen: '일괄 그라데이션 생성 (덮어쓰기)', genEasing: '생성 이징', clearTrack: '트랙 효과 초기화',
-        exportFmt: '내보내기 형식', estSize: '예상', exportBtn: 'APNG 내보내기', exportZip: 'ZIP 프레임 내보내기', globalCtrl: '전체 제어', loop: '반복', speed: '배속',
+        exportSettingsBtn: '내보내기 / 다운로드', exportSettingsTitle: '내보내기 설정', format: '형식',
+        colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
+        origFrames: '원본 프레임 유지', customFrames: '사용자 지정 프레임', framesUnit: '프레임 (자동 리샘플링)',
+        exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '내보내기 실패.',
+        fmtApng: 'APNG', fmtGif: 'GIF', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
+        compLossless: '무손실', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
+        size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: '없음', green: '녹색 제거', black: '검은색 제거', white: '흰색 제거', customColor: '사용자 지정 색상',
-        fmtApng: 'APNG (애니메이션 PNG)', fmtZipPng: 'ZIP (PNG 시퀀스)', fmtZipJpg: 'ZIP (JPEG 시퀀스)', fmtZipWebp: 'ZIP (WebP / 고압축)',
-        compLossless: '무손실 (최고 화질)', comp256: '256색 (고화질)', comp128: '128색 (중간 화질)', comp64: '64색 (저화질/최소)',
-        size100: '100% 크기', size75: '75% 크기 (축소)', size50: '50% 크기 (대폭 축소)',
         noKfs: '~ 키프레임이 없습니다. [효과 편집] 패널에서 추가하세요 ~', trackFrame: '프레임',
-        addTimeLen: '연장 시간 삽입', addStart: '시작에 추가', addEnd: '끝에 추가', insertFrames: '프레임 삽입'
+        addTimeLen: '연장 시간 삽입', addStart: '시작에 추가', addEnd: '끝에 추가', insertFrames: '프레임 삽입', loop: '반복', speed: '배속', globalCtrl: '전체 제어'
       }
     };
 
@@ -129,7 +141,6 @@
       invert: 0, rotate: 0, translateX: 0, translateY: 0, scale: 1.0 
     };
 
-    // 定義各個軌道管理的屬性
     const TRACK_PROPS = {
       opacity: ['opacity'], rotate: ['rotate'], translate: ['translateX', 'translateY'],
       scale: ['scale'], color: ['hue', 'saturation', 'brightness', 'contrast', 'invert']
@@ -198,9 +209,8 @@
       const [isDragOver, setIsDragOver] = useState(false); 
       const [batchDelayInput, setBatchDelayInput] = useState(100); 
 
-      // 加入時間相關狀態
       const [addSecondsInput, setAddSecondsInput] = useState(1);
-      const [addPosition, setAddPosition] = useState('end'); // start or end
+      const [addPosition, setAddPosition] = useState('end'); 
 
       const [gradType, setGradType] = useState('opacity');
       const [gradEasing, setGradEasing] = useState('easeInOut'); 
@@ -216,9 +226,17 @@
       const [gradScaleStart, setGradScaleStart] = useState(100);
       const [gradScaleEnd, setGradScaleEnd] = useState(150);
 
-      const [exportFormat, setExportFormat] = useState('apng'); // apng, zip-png, zip-jpg, zip-webp
-      const [compressionLevel, setCompressionLevel] = useState(0); 
-      const [exportScale, setExportScale] = useState(1.0); 
+      // === Export Modal State ===
+      const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+      const [exportConfig, setExportConfig] = useState({
+        format: 'apng', // apng, gif, zip-png, zip-jpg, zip-webp
+        compression: 0, // 0, 256, 128, 64, 32, 16
+        scale: 1.0,     // 1.0, 0.75, 0.5, 0.25
+        bgColor: '#ffffff',
+        frameMode: 'original', // 'original' or 'custom'
+        customFrameCount: 30
+      });
+
       const [targetSeconds, setTargetSeconds] = useState(2);
       const [convertEffect, setConvertEffect] = useState('none');
 
@@ -371,7 +389,7 @@
               redoRef.current?.();
             }
           } 
-          else if (framesLenRef.current > 1 && !isCropMode && !isGridView) {
+          else if (framesLenRef.current > 1 && !isCropMode && !isGridView && !isExportModalOpen) {
             if (e.code === 'Space') {
               e.preventDefault();
               setIsPlaying(p => !p);
@@ -401,7 +419,7 @@
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [isCropMode, isGridView]);
+      }, [isCropMode, isGridView, isExportModalOpen]);
 
       // 去背演算
       const applyChromaKey = (sourceCanvas, bgSettings) => {
@@ -613,7 +631,6 @@
                     canvas: c,
                     delay: delayPerFrame,
                     customFilters: { ...targetFrame.customFilters },
-                    // 靜止延長的影格預設不帶關鍵影格特效
                     keyframes: { opacity: false, scale: false, rotate: false, translate: false, color: false }, 
                     easings: { ...targetFrame.easings }
                 };
@@ -734,28 +751,32 @@
         }
       };
 
-      const getRawInterpolatedFilters = useCallback((allFrames, index) => {
+      // Core Interpolation with Fractional Index Support for smooth resampling
+      const getRawInterpolatedFilters = useCallback((allFrames, floatIndex) => {
         const interpolated = { ...DEFAULT_FILTERS };
-        Object.assign(interpolated, allFrames[index].customFilters);
+        const baseIdx = Math.floor(floatIndex);
+        if(!allFrames[baseIdx]) return interpolated;
+
+        Object.assign(interpolated, allFrames[baseIdx].customFilters);
 
         for (const track of ['opacity', 'rotate', 'translate', 'scale', 'color']) {
-          if (allFrames[index].keyframes[track]) {
-            TRACK_PROPS[track].forEach(prop => { interpolated[prop] = allFrames[index].customFilters[prop]; });
+          if (Number.isInteger(floatIndex) && allFrames[baseIdx].keyframes[track]) {
+            TRACK_PROPS[track].forEach(prop => { interpolated[prop] = allFrames[baseIdx].customFilters[prop]; });
             continue;
           }
           
           let prevK = null, prevIdx = -1;
-          for (let i = index - 1; i >= 0; i--) {
+          for (let i = baseIdx; i >= 0; i--) {
             if (allFrames[i].keyframes[track]) { prevK = allFrames[i]; prevIdx = i; break; }
           }
           let nextK = null, nextIdx = -1;
-          for (let i = index + 1; i < allFrames.length; i++) {
+          for (let i = baseIdx + (Number.isInteger(floatIndex)?1:0); i < allFrames.length; i++) {
             if (allFrames[i].keyframes[track]) { nextK = allFrames[i]; nextIdx = i; break; }
           }
 
           if (prevK && nextK) {
-            const p = (index - prevIdx) / (nextIdx - prevIdx);
-            const t = applyEasing(p, prevK.easings[track] || 'linear');
+            const p = (floatIndex - prevIdx) / (nextIdx - prevIdx);
+            const t = applyEasing(Math.max(0, Math.min(1, p)), prevK.easings[track] || 'linear');
             TRACK_PROPS[track].forEach(prop => {
               interpolated[prop] = prevK.customFilters[prop] + t * (nextK.customFilters[prop] - prevK.customFilters[prop]);
             });
@@ -860,8 +881,8 @@
         return () => cancelAnimationFrame(animationId);
       }, [isPlaying, frames, speed, isLooping]);
 
-      const getFinalRenderFilters = useCallback((allFrames, index) => {
-        const raw = getRawInterpolatedFilters(allFrames, index);
+      const getFinalRenderFilters = useCallback((allFrames, floatIndex) => {
+        const raw = getRawInterpolatedFilters(allFrames, floatIndex);
         return {
           opacity: Math.max(0, Math.min(1, globalOpacity * raw.opacity)),
           filterString: `hue-rotate(${globalHue + raw.hue}deg) saturate(${Math.max(0, (globalSaturation * raw.saturation) / 100)}%) brightness(${Math.max(0, (globalBrightness * raw.brightness) / 100)}%) contrast(${Math.max(0, (globalContrast * raw.contrast) / 100)}%) invert(${Math.min(100, Math.max(0, globalInvert + raw.invert))}%)`,
@@ -1150,14 +1171,21 @@
 
       const getEstimatedSize = () => {
         if (frames.length === 0) return 0;
-        const baseW = frames[0].canvas.width * exportScale;
-        const baseH = frames[0].canvas.height * exportScale;
-        const rawBytes = baseW * baseH * 4 * frames.length;
+        const baseW = frames[0].canvas.width * exportConfig.scale;
+        const baseH = frames[0].canvas.height * exportConfig.scale;
+        // Count depends on frame mode
+        let fCount = frames.length;
+        if (exportConfig.frameMode === 'custom') {
+            fCount = Math.max(2, exportConfig.customFrameCount);
+        }
+        const rawBytes = baseW * baseH * 4 * fCount;
         let multiplier = 0.25; 
-        if (exportFormat.includes('webp') || exportFormat.includes('jpg')) multiplier = 0.05;
-        else if (compressionLevel === 256) multiplier = 0.05;
-        else if (compressionLevel === 128) multiplier = 0.035;
-        else if (compressionLevel === 64) multiplier = 0.025;
+        if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
+        else if (exportConfig.compression === 256) multiplier = 0.05;
+        else if (exportConfig.compression === 128) multiplier = 0.035;
+        else if (exportConfig.compression === 64) multiplier = 0.025;
+        else if (exportConfig.compression === 32) multiplier = 0.015;
+        else if (exportConfig.compression === 16) multiplier = 0.01;
         return rawBytes * multiplier;
       };
 
@@ -1166,25 +1194,25 @@
         const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
       };
 
-      const getExportCanvasForFrame = (index, fillWhite = false) => {
-        const frame = frames[index]; 
+      const getExportCanvasForFrame = (baseIndex, floatIndex, fillBgColor = null) => {
+        const frame = frames[baseIndex]; 
         const orgW = frame.canvas.width; const orgH = frame.canvas.height;
-        const w = Math.max(1, Math.round(orgW * exportScale));
-        const h = Math.max(1, Math.round(orgH * exportScale));
+        const w = Math.max(1, Math.round(orgW * exportConfig.scale));
+        const h = Math.max(1, Math.round(orgH * exportConfig.scale));
 
         const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
-        const ctx = tempCanvas.getContext('2d');
+        const ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
-        if (fillWhite) {
-            ctx.fillStyle = '#FFFFFF';
+        if (fillBgColor) {
+            ctx.fillStyle = fillBgColor;
             ctx.fillRect(0, 0, w, h);
         }
 
-        const processedChromaCanvas = (bgRemoval.type !== 'none' && chromaCache.current.canvases[index]) ? chromaCache.current.canvases[index] : frame.canvas;
-        const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, index);
+        const processedChromaCanvas = (bgRemoval.type !== 'none' && chromaCache.current.canvases[baseIndex]) ? chromaCache.current.canvases[baseIndex] : frame.canvas;
+        const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, floatIndex);
         
         ctx.globalAlpha = opacity; ctx.filter = filterString;
-        ctx.scale(exportScale, exportScale);
+        ctx.scale(exportConfig.scale, exportConfig.scale);
         ctx.translate(orgW/2 + translateX, orgH/2 + translateY); 
         ctx.rotate((rotate * Math.PI) / 180); 
         ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
@@ -1194,82 +1222,149 @@
         return { canvas: tempCanvas, ctx, w, h }; 
       };
 
-      const handleExport = async () => {
-        if (!isAppReady || frames.length === 0) return;
+      // 整合與重構的匯出引擎
+      const handleConfirmExport = async () => {
         setIsExporting(true);
         try {
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          if (exportFormat === 'apng') {
-              const imgs = []; const delays = []; 
-              let exportW = 0, exportH = 0;
-              for (let i = 0; i < frames.length; i++) {
-                const { ctx, w, h } = getExportCanvasForFrame(i);
-                if (i === 0) { exportW = w; exportH = h; }
-                imgs.push(ctx.getImageData(0, 0, exportW, exportH).data.buffer); 
-                delays.push(frames[i].delay / speed);
-              }
-              let apngBuffer = UPNG.encode(imgs, exportW, exportH, compressionLevel, delays);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const exportPoints = [];
+            let totalDuration = frames.reduce((sum, f) => sum + f.delay, 0);
+            if (totalDuration === 0) totalDuration = 1000;
 
-              if (!isLooping) {
-                 const crcTable = new Uint32Array(256);
-                 for (let i = 0; i < 256; i++) {
-                    let c = i;
-                    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-                    crcTable[i] = c;
-                 }
-                 const crc32 = (buf, off, len) => {
-                    let crc = 0 ^ (-1);
-                    for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
-                    return (crc ^ (-1)) >>> 0;
-                 };
-                 const view = new DataView(apngBuffer);
-                 const uint8 = new Uint8Array(apngBuffer);
-                 const length = view.byteLength;
-                 let offset = 8;
-                 while (offset < length) {
-                    const chunkLen = view.getUint32(offset);
-                    const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
-                    if (chunkType === 'acTL') {
-                       view.setUint32(offset + 12, 1); 
-                       const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
-                       view.setUint32(offset + 8 + chunkLen, newCrc);
-                       break;
-                    }
-                    offset += 8 + chunkLen + 4;
-                 }
-              }
-              const blob = new Blob([apngBuffer], { type: 'image/apng' });
-              const url = URL.createObjectURL(blob); 
-              const a = document.createElement('a'); 
-              a.href = url; a.download = `${originalFileName}_apng.png`; a.click();
-              URL.revokeObjectURL(url);
-          } else {
-              // ZIP Exports
-              const zipData = {};
-              const isJpeg = exportFormat === 'zip-jpg';
-              const mimeType = isJpeg ? 'image/jpeg' : (exportFormat === 'zip-webp' ? 'image/webp' : 'image/png');
-              const ext = isJpeg ? 'jpg' : (exportFormat === 'zip-webp' ? 'webp' : 'png');
-
-              for (let i = 0; i < frames.length; i++) {
-                const { canvas } = getExportCanvasForFrame(i, isJpeg); 
-                const buffer = await new Promise(resolve => {
-                  canvas.toBlob(blob => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(new Uint8Array(reader.result));
-                    reader.readAsArrayBuffer(blob);
-                  }, mimeType, isJpeg ? 0.9 : 0.85); 
+            if (exportConfig.frameMode === 'original' || frames.length <= 1) {
+                frames.forEach((f, idx) => {
+                    exportPoints.push({ baseIndex: idx, floatIndex: idx, delay: f.delay / speed });
                 });
-                const idxStr = String(i + 1).padStart(3, '0');
-                zipData[`frame_${idxStr}.${ext}`] = buffer;
-              }
-              const zipped = fflate.zipSync(zipData);
-              const blob = new Blob([zipped], { type: 'application/zip' });
-              const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; 
-              a.download = `${originalFileName}_frames.zip`; a.click();
-              URL.revokeObjectURL(url);
-          }
-        } catch (e) { setError("Export failed."); } finally { setIsExporting(false); }
+            } else {
+                const N = Math.max(2, exportConfig.customFrameCount);
+                const realDuration = totalDuration / speed;
+                const dt = realDuration / N; 
+                
+                for (let i = 0; i < N; i++) {
+                    const targetTime = i * (totalDuration / N); 
+                    let acc = 0;
+                    let baseIdx = frames.length - 1;
+                    let floatIdx = frames.length - 1;
+                    for (let j = 0; j < frames.length; j++) {
+                        if (targetTime >= acc && targetTime <= acc + frames[j].delay) { 
+                            baseIdx = j; 
+                            floatIdx = j + ((targetTime - acc) / Math.max(1, frames[j].delay));
+                            break; 
+                        }
+                        acc += frames[j].delay;
+                    }
+                    exportPoints.push({ baseIndex: baseIdx, floatIndex: floatIdx, delay: dt });
+                }
+            }
+
+            let gifencModule;
+            if (exportConfig.format === 'gif') {
+                gifencModule = await import('https://esm.sh/gifenc@1.0.3');
+            }
+
+            const imgs = [];
+            const delays = [];
+            let exportW = 0, exportH = 0;
+
+            let gif;
+            if (exportConfig.format === 'gif') gif = gifencModule.GIFEncoder();
+            
+            const zipData = {};
+            const isJpeg = exportConfig.format === 'zip-jpg';
+            const isWebp = exportConfig.format === 'zip-webp';
+            const needsFillBg = exportConfig.format === 'gif' || isJpeg;
+
+            for (let i = 0; i < exportPoints.length; i++) {
+                const pt = exportPoints[i];
+                const { ctx, w, h, canvas } = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, needsFillBg ? exportConfig.bgColor : null);
+                if (i === 0) { exportW = w; exportH = h; }
+
+                if (exportConfig.format === 'apng') {
+                    imgs.push(ctx.getImageData(0, 0, exportW, exportH).data.buffer);
+                    delays.push(pt.delay);
+                } else if (exportConfig.format === 'gif') {
+                    const imgData = ctx.getImageData(0, 0, exportW, exportH);
+                    const cnum = exportConfig.compression === 0 ? 256 : exportConfig.compression;
+                    const palette = gifencModule.quantize(imgData.data, cnum);
+                    const index = gifencModule.applyPalette(imgData.data, palette);
+                    gif.writeFrame(index, exportW, exportH, { palette, delay: pt.delay });
+                } else {
+                    const mimeType = isJpeg ? 'image/jpeg' : (isWebp ? 'image/webp' : 'image/png');
+                    const ext = isJpeg ? 'jpg' : (isWebp ? 'webp' : 'png');
+                    const quality = isJpeg ? 0.9 : 0.85;
+                    const buffer = await new Promise(resolve => {
+                        canvas.toBlob(blob => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(new Uint8Array(reader.result));
+                            reader.readAsArrayBuffer(blob);
+                        }, mimeType, quality);
+                    });
+                    const idxStr = String(i + 1).padStart(4, '0');
+                    zipData[`frame_${idxStr}.${ext}`] = buffer;
+                }
+            }
+
+            let blob;
+            let filenameExt;
+            if (exportConfig.format === 'apng') {
+                // Parse compression to integer, defaulting to 0 for lossless
+                let cnum = parseInt(exportConfig.compression) || 0;
+                let apngBuffer = UPNG.encode(imgs, exportW, exportH, cnum, delays);
+                
+                if (!isLooping) {
+                   const crcTable = new Uint32Array(256);
+                   for (let i = 0; i < 256; i++) {
+                      let c = i;
+                      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                      crcTable[i] = c;
+                   }
+                   const crc32 = (buf, off, len) => {
+                      let crc = 0 ^ (-1);
+                      for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
+                      return (crc ^ (-1)) >>> 0;
+                   };
+                   const view = new DataView(apngBuffer);
+                   const uint8 = new Uint8Array(apngBuffer);
+                   const length = view.byteLength;
+                   let offset = 8;
+                   while (offset < length) {
+                      const chunkLen = view.getUint32(offset);
+                      const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
+                      if (chunkType === 'acTL') {
+                         view.setUint32(offset + 12, 1); 
+                         const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
+                         view.setUint32(offset + 8 + chunkLen, newCrc);
+                         break;
+                      }
+                      offset += 8 + chunkLen + 4;
+                   }
+                }
+                blob = new Blob([apngBuffer], { type: 'image/apng' });
+                filenameExt = 'apng.png';
+            } else if (exportConfig.format === 'gif') {
+                gif.finish();
+                blob = new Blob([gif.bytesView()], { type: 'image/gif' });
+                filenameExt = 'gif';
+            } else {
+                const zipped = fflate.zipSync(zipData);
+                blob = new Blob([zipped], { type: 'application/zip' });
+                filenameExt = 'frames.zip';
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${originalFileName}_output.${filenameExt}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            setIsExportModalOpen(false);
+            
+        } catch (e) { 
+            console.error(e);
+            setError(t('exportFailed')); 
+        } finally { 
+            setIsExporting(false); 
+        }
       };
 
       return (
@@ -1301,6 +1396,108 @@
               <div className="bg-white dark:bg-slate-800 px-12 py-10 rounded-3xl shadow-2xl flex flex-col items-center gap-4 transform scale-105">
                 <ImagePlus className="w-20 h-20 text-purple-600 dark:text-purple-400 animate-bounce" />
                 <span className="text-purple-700 dark:text-purple-300 font-black text-3xl tracking-wide">{frames.length > 0 ? t('replace') : t('importBtn')}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Export Modal */}
+          {isExportModalOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-[420px] w-full overflow-hidden flex flex-col animate-fade-in">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2"><FileOutput className="w-5 h-5 text-blue-500"/> {t('exportSettingsTitle')}</h3>
+                  <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X className="w-5 h-5"/></button>
+                </div>
+                
+                <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                  {/* Format */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('format')}</label>
+                    <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                      <option value="apng">{t('fmtApng')}</option>
+                      <option value="gif">{t('fmtGif')}</option>
+                      <option value="zip-png">{t('fmtZipPng')}</option>
+                      <option value="zip-jpg">{t('fmtZipJpg')}</option>
+                      <option value="zip-webp">{t('fmtZipWebp')}</option>
+                    </select>
+                  </div>
+                  
+                  {/* Compression */}
+                  {['apng', 'gif'].includes(exportConfig.format) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('colors')}</label>
+                      <select value={exportConfig.compression} onChange={e => setExportConfig({...exportConfig, compression: parseInt(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                        <option value={0}>{t('compLossless')}</option>
+                        <option value={256}>{t('comp256')}</option>
+                        <option value={128}>{t('comp128')}</option>
+                        <option value={64}>{t('comp64')}</option>
+                        <option value={32}>{t('comp32')}</option>
+                        <option value={16}>{t('comp16')}</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* BG Color (Visible for GIF / JPEG) */}
+                  {['gif', 'zip-jpg'].includes(exportConfig.format) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('bgColor')}</label>
+                      <div className="flex items-center gap-3">
+                        <input type="color" value={exportConfig.bgColor} onChange={e => setExportConfig({...exportConfig, bgColor: e.target.value})} className="w-10 h-10 rounded border-0 p-0 cursor-pointer" />
+                        <span className="text-sm font-mono text-slate-600 dark:text-slate-300">{exportConfig.bgColor.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scale */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('outScale')}</label>
+                    <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                      <option value={1.0}>{t('size100')}</option>
+                      <option value={0.75}>{t('size75')}</option>
+                      <option value={0.5}>{t('size50')}</option>
+                      <option value={0.25}>{t('size25')}</option>
+                    </select>
+                  </div>
+
+                  {/* Frame Count */}
+                  {frames.length > 1 && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block">{t('outFrames')}</label>
+                      <div className="flex flex-col gap-3">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                          <input type="radio" name="fmode" checked={exportConfig.frameMode === 'original'} onChange={() => setExportConfig({...exportConfig, frameMode: 'original'})} className="w-4 h-4 text-blue-600" />
+                          <span className="text-slate-700 dark:text-slate-200">{t('origFrames')} ({frames.length})</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                          <input type="radio" name="fmode" checked={exportConfig.frameMode === 'custom'} onChange={() => setExportConfig({...exportConfig, frameMode: 'custom'})} className="w-4 h-4 text-blue-600" />
+                          <span className="text-slate-700 dark:text-slate-200">{t('customFrames')}</span>
+                        </label>
+                        {exportConfig.frameMode === 'custom' && (
+                          <div className="pl-8 flex items-center gap-2">
+                            <input type="number" min="2" max="500" value={exportConfig.customFrameCount} onChange={e => setExportConfig({...exportConfig, customFrameCount: parseInt(e.target.value) || 2})} className="w-20 p-1.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded text-sm text-center" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{t('framesUnit')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Size Estimation */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 flex justify-between items-center">
+                     <span className="text-xs font-bold text-blue-800 dark:text-blue-300">{t('estSize')}</span>
+                     <span className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400">{formatBytes(getEstimatedSize())}</span>
+                  </div>
+                </div>
+                
+                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-3">
+                  <button onClick={() => setIsExportModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    {t('cancel')}
+                  </button>
+                  <button onClick={handleConfirmExport} disabled={isExporting} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md">
+                    {isExporting ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></span> : <Download className="w-4 h-4"/>}
+                    {isExporting ? t('exporting') : t('confirmExport')}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1896,43 +2093,14 @@
 
                 </div>
 
-                {/* 匯出面板 */}
+                {/* 新匯出面板 (打開 Modal) */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-                  {frames.length > 1 && (
-                    <div className="flex flex-col gap-2 mb-3">
-                      <div className="flex items-center gap-2">
-                         <select value={exportFormat} onChange={(e) => {setExportFormat(e.target.value);}} className="flex-1 px-2 py-1.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                           <option value="apng">{t('fmtApng')}</option>
-                           <option value="zip-png">{t('fmtZipPng')}</option>
-                           <option value="zip-jpg">{t('fmtZipJpg')}</option>
-                           <option value="zip-webp">{t('fmtZipWebp')}</option>
-                         </select>
-                      </div>
-                      {exportFormat === 'apng' && (
-                          <div className="flex items-center gap-2">
-                             <select value={compressionLevel} onChange={(e) => setCompressionLevel(parseInt(e.target.value))} className="flex-1 px-2 py-1.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                               <option value={0}>{t('compLossless')}</option>
-                               <option value={256}>{t('comp256')}</option>
-                               <option value={128}>{t('comp128')}</option>
-                               <option value={64}>{t('comp64')}</option>
-                             </select>
-                          </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                         <select value={exportScale} onChange={(e) => setExportScale(parseFloat(e.target.value))} className="flex-1 px-2 py-1.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                           <option value={1.0}>{t('size100')}</option>
-                           <option value={0.75}>{t('size75')}</option>
-                           <option value={0.5}>{t('size50')}</option>
-                         </select>
-                         <span className="text-[10px] bg-white dark:bg-slate-800 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded font-mono text-blue-600 dark:text-blue-400 min-w-[70px] text-center shadow-sm">{t('estSize')} {formatBytes(getEstimatedSize())}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    <button onClick={handleExport} disabled={isExporting || frames.length === 0} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
-                      <Download className="w-4 h-4" /> {frames.length > 1 ? (exportFormat === 'apng' ? t('exportBtn') : t('exportZip')) : t('exportBtn')}
-                    </button>
-                  </div>
+                  <button onClick={() => {
+                      setExportConfig(prev => ({...prev, customFrameCount: frames.length}));
+                      setIsExportModalOpen(true);
+                  }} disabled={isExporting || frames.length === 0} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
+                      <Download className="w-5 h-5" /> {t('exportSettingsBtn')}
+                  </button>
                   <input id="file-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
                   <input id="replace-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp" className="hidden" disabled={!isAppReady} onChange={onReplaceFileChange} />
                 </div>
@@ -1965,24 +2133,37 @@
     // 結合 Range 與 Number 雙向綁定的 UI 元件
     function FilterSliderWithInput({ value, min, max, step = 1, onChange }) {
       const isFloat = !Number.isInteger(step);
-      const displayVal = isFloat ? Number(value).toFixed(1) : Math.round(value);
-      
+      const [localVal, setLocalVal] = React.useState(isFloat ? Number(value).toFixed(1) : Math.round(value));
+      const [isEditing, setIsEditing] = React.useState(false);
+
+      React.useEffect(() => {
+        if (!isEditing) {
+          setLocalVal(isFloat ? Number(value).toFixed(1) : Math.round(value));
+        }
+      }, [value, isFloat, isEditing]);
+
       const handleInputChange = (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) return;
-        onChange(val);
+        setLocalVal(e.target.value);
       };
       
-      const handleBlur = (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) val = 0;
+      const handleBlur = () => {
+        setIsEditing(false);
+        let val = parseFloat(localVal);
+        if (isNaN(val)) val = value;
+        // 允許超出滑桿的 max 預設值，只確保不低於最小值
+        val = Math.max(min, val);
         onChange(val);
+        setLocalVal(isFloat ? Number(val).toFixed(1) : Math.round(val));
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') e.target.blur();
       };
 
       return (
         <div className="flex items-center gap-3">
-          <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="flex-1 accent-blue-500 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" />
-          <input type="number" value={displayVal} onChange={handleInputChange} onBlur={handleBlur} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded font-mono text-slate-700 focus:outline-none focus:border-blue-500 shrink-0 shadow-inner" />
+          <input type="range" min={min} max={max} step={step} value={value > max ? max : value} onChange={(e) => onChange(parseFloat(e.target.value))} className="flex-1 accent-blue-500 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+          <input type="number" step={step} value={isEditing ? localVal : (isFloat ? Number(value).toFixed(1) : Math.round(value))} onChange={handleInputChange} onFocus={() => setIsEditing(true)} onBlur={handleBlur} onKeyDown={handleKeyDown} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded font-mono text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 shrink-0 shadow-inner" />
         </div>
       );
     }
