@@ -35,7 +35,7 @@
     // === 多國語言字典 ===
     const i18n = {
       'zh-TW': {
-        title: '動態影像編輯器', author: '作者: 闕雪', shortcuts: '鍵盤快捷鍵', playPause: '播放/暫停', prevNext: '切換影格', 
+        title: '動態影像編輯器', author: '作者:闕雪，X:@vm060460', shortcuts: '鍵盤快捷鍵', playPause: '播放/暫停', prevNext: '切換影格', 
         delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫', dragDrop: '拖曳檔案至此或點擊選擇',
         gridView: '網格檢視', canvasView: '返回畫布', replace: '換圖', cropExpand: '裁切/擴展', clear: '清除',
         selected: '已選取', frames: '個影格', selectAll: '全選', deselect: '取消選取', copySelected: '複製所選', delSelected: '刪除所選',
@@ -57,7 +57,7 @@
         addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格'
       },
       'en': {
-        title: 'Motion Image Editor', author: 'Author: QueXue', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
+        title: 'Motion Image Editor', author: 'Author: QueXue, X:@vm060460', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
         delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Anim', dragDrop: 'Drag & Drop or Click',
         gridView: 'Grid View', canvasView: 'Canvas', replace: 'Replace', cropExpand: 'Crop/Expand', clear: 'Clear',
         selected: 'Selected', frames: 'frames', selectAll: 'Select All', deselect: 'Deselect', copySelected: 'Duplicate', delSelected: 'Delete',
@@ -79,7 +79,7 @@
         addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames'
       },
       'ja': {
-        title: '動的画像エディタ', author: '作成者: 闕雪', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
+        title: '動的画像エディタ', author: '作成者: 闕雪, X:@vm060460', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
         delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/アニメ読込', dragDrop: 'ドラッグ＆ドロップ',
         gridView: 'グリッド表示', canvasView: 'キャンバス表示', replace: '置換', cropExpand: 'トリミング/拡張', clear: 'クリア',
         selected: '選択中', frames: 'フレーム', selectAll: 'すべて選択', deselect: '選択解除', copySelected: '複製', delSelected: '削除',
@@ -101,10 +101,10 @@
         addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入'
       },
       'ko': {
-        title: '동적 이미지 편집기', author: '작성자: 闕雪', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
+        title: '동적 이미지 편집기', author: '작성자: 闕雪, X:@vm060460', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
         delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/애니 가져오기', dragDrop: '드래그 앤 드롭',
         gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
-        selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
+        selected: '선택됨', frames: '프레임', selectAll: '모두 선택', 모deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
         alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효과 편집',
         animLength: '애니메이션 길이', autoFx: '자동 효과', sec: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
@@ -1313,7 +1313,9 @@
               </h1>
               {/* 快速鍵與作者提示 */}
               <div className="hidden md:flex group relative items-center justify-center bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded cursor-help">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-2 border-r border-slate-300 dark:border-slate-600 pr-2">{t('author')}</span>
+                <a href="https://x.com/vm060460" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors mr-2 border-r border-slate-300 dark:border-slate-600 pr-2">
+                  {t('author')}
+                </a>
                 <Keyboard className="w-4 h-4 text-slate-400 hover:text-blue-500" />
                 <div className="absolute left-0 top-full mt-2 w-64 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-lg p-4 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                   <p className="font-bold mb-2 border-b border-slate-600 pb-1">{t('shortcuts')}</p>
