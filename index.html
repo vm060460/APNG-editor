@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>動態影像編輯器</title>
+  <title>APNG 編輯器</title>
   <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 載入 Babel -->
@@ -56,10 +56,11 @@
     function App() {
       const [isAppReady, setIsAppReady] = useState(false);
       const [frames, setFrames] = useState([]);
+      const [originalFileName, setOriginalFileName] = useState('edited_animation');
       
       const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
       const [isPlaying, setIsPlaying] = useState(false);
-      const [isLooping, setIsLooping] = useState(true);
+      const [isLooping, setIsLooping] = useState(false); // 預設關閉循環
       const [speed, setSpeed] = useState(1.0);
       
       const [activeTab, setActiveTab] = useState('global');
@@ -310,16 +311,16 @@
         return [buildFrameObj(canvas, 1000)];
       };
 
-      const cloneCanvas = (oldCanvas) => {
-        const c = document.createElement('canvas'); c.width = oldCanvas.width; c.height = oldCanvas.height;
-        c.getContext('2d').drawImage(oldCanvas, 0, 0); return c;
-      };
-
       const processFile = async (file) => {
         if (!isAppReady) return;
         try {
           setIsLoading(true); setError(null); setIsPlaying(false); isRestoring.current = true;
           
+          // 解析並記錄檔名 (去除副檔名)
+          const nameExtIdx = file.name.lastIndexOf('.');
+          const nameWithoutExt = nameExtIdx !== -1 ? file.name.substring(0, nameExtIdx) : file.name;
+          setOriginalFileName(nameWithoutExt);
+
           setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
           setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0);
           setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
@@ -728,9 +729,47 @@
             const { ctx } = getExportCanvasForFrame(i);
             imgs.push(ctx.getImageData(0, 0, w, h).data.buffer); delays.push(frames[i].delay / speed);
           }
-          const apngBuffer = UPNG.encode(imgs, w, h, compressionLevel, delays);
+          let apngBuffer = UPNG.encode(imgs, w, h, compressionLevel, delays);
+
+          // 根據是否循環修改 APNG 播放次數 (修改 acTL chunk)
+          if (!isLooping) {
+             const crcTable = new Uint32Array(256);
+             for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                crcTable[i] = c;
+             }
+             const crc32 = (buf, off, len) => {
+                let crc = 0 ^ (-1);
+                for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
+                return (crc ^ (-1)) >>> 0;
+             };
+
+             const view = new DataView(apngBuffer);
+             const uint8 = new Uint8Array(apngBuffer);
+             const length = view.byteLength;
+             let offset = 8;
+             while (offset < length) {
+                const chunkLen = view.getUint32(offset);
+                const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
+                if (chunkType === 'acTL') {
+                   // 修改播放次數為 1 (只播放一次)
+                   view.setUint32(offset + 12, 1); 
+                   // 重算 acTL 的 CRC (範圍包含 Type 和 Data)
+                   const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
+                   view.setUint32(offset + 8 + chunkLen, newCrc);
+                   break;
+                }
+                offset += 8 + chunkLen + 4;
+             }
+          }
+
           const blob = new Blob([apngBuffer], { type: 'image/apng' });
-          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'edited_animation.png'; a.click();
+          const url = URL.createObjectURL(blob); 
+          const a = document.createElement('a'); 
+          a.href = url; 
+          a.download = `${originalFileName}_apng.png`; 
+          a.click();
           URL.revokeObjectURL(url);
         } catch (e) { setError("匯出失敗。"); } finally { setIsExporting(false); }
       };
@@ -755,7 +794,9 @@
           }
           const zipped = fflate.zipSync(zipData);
           const blob = new Blob([zipped], { type: 'application/zip' });
-          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'animation_frames.zip'; a.click();
+          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; 
+          a.download = `${originalFileName}_frames.zip`; 
+          a.click();
           URL.revokeObjectURL(url);
         } catch (e) { setError("打包影格失敗。"); } finally { setIsExporting(false); }
       };
@@ -1004,7 +1045,7 @@
                         <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                           <div><label className="text-[10px] font-bold">透明度 (%)</label><FilterSliderWithInput value={globalOpacity * 100} min={0} max={100} onChange={v => setGlobalOpacity(v / 100)} /></div>
                           <div><label className="text-[10px] font-bold">色相 (°)</label><FilterSliderWithInput value={globalHue} min={0} max={360} onChange={setGlobalHue} /></div>
-                          <div><label className="text-[10px] font-bold">飽鎖度 (%)</label><FilterSliderWithInput value={globalSaturation} min={0} max={200} onChange={setGlobalSaturation} /></div>
+                          <div><label className="text-[10px] font-bold">飽和度 (%)</label><FilterSliderWithInput value={globalSaturation} min={0} max={200} onChange={setGlobalSaturation} /></div>
                           <div><label className="text-[10px] font-bold">對比度 (%)</label><FilterSliderWithInput value={globalContrast} min={0} max={200} onChange={setGlobalContrast} /></div>
                           <div><label className="text-[10px] font-bold">負片 (%)</label><FilterSliderWithInput value={globalInvert} min={0} max={100} onChange={setGlobalInvert} /></div>
                         </div>
@@ -1145,27 +1186,39 @@
       );
     }
 
-    // 結合 Range 與 Number 雙向綁定的 UI 元件
+    // 結合 Range 與 Number 雙向綁定的 UI 元件 (修正數字輸入問題)
     function FilterSliderWithInput({ value, min, max, step = 1, onChange }) {
       const isFloat = !Number.isInteger(step);
-      const displayVal = isFloat ? Number(value).toFixed(1) : Math.round(value);
-      
+      const [localVal, setLocalVal] = React.useState(isFloat ? Number(value).toFixed(1) : Math.round(value));
+      const [isEditing, setIsEditing] = React.useState(false);
+
+      React.useEffect(() => {
+        if (!isEditing) {
+          setLocalVal(isFloat ? Number(value).toFixed(1) : Math.round(value));
+        }
+      }, [value, isFloat, isEditing]);
+
       const handleInputChange = (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) return;
-        onChange(val);
+        setLocalVal(e.target.value);
       };
       
-      const handleBlur = (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) val = 0;
+      const handleBlur = () => {
+        setIsEditing(false);
+        let val = parseFloat(localVal);
+        if (isNaN(val)) val = value;
+        val = Math.max(min, Math.min(max, val));
         onChange(val);
+        setLocalVal(isFloat ? Number(val).toFixed(1) : Math.round(val));
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') e.target.blur();
       };
 
       return (
         <div className="flex items-center gap-3">
           <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="flex-1 accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-          <input type="number" value={displayVal} onChange={handleInputChange} onBlur={handleBlur} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 rounded font-mono text-slate-700 focus:outline-none focus:border-blue-500 shrink-0" />
+          <input type="number" step={step} value={isEditing ? localVal : (isFloat ? Number(value).toFixed(1) : Math.round(value))} onChange={handleInputChange} onFocus={() => setIsEditing(true)} onBlur={handleBlur} onKeyDown={handleKeyDown} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 rounded font-mono text-slate-700 focus:outline-none focus:border-blue-500 shrink-0" />
         </div>
       );
     }
