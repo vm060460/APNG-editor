@@ -49,9 +49,10 @@
         currFrame: '第 {n} 格', rmNode: '移除節點', addNode: '插入節點', nextEasing: '前往下個節點的曲線速度',
         autoGen: '快速產生整段漸變 (將覆寫所有節點)', genEasing: '生成使用之曲線', clearTrack: '清除此軌道所有特效',
         exportSettingsBtn: '匯出 / 下載', exportSettingsTitle: '匯出設定', format: '匯出格式',
-        colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF / JPEG 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
+        colors: '色彩與壓縮 (影響檔案大小)', qualityLabel: '輸出畫質 (Quality)', bgColor: '背景顏色 (用於 GIF / JPEG 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
         origFrames: '維持原始影格數', customFrames: '自訂輸出影格數', framesUnit: '格 (自動平滑重採樣)',
         exporting: '處理與編碼中 (若為影片可能需要較長時間)...', confirmExport: '確認匯出', exportFailed: '匯出或載入失敗，請檢查檔案。',
+        exportTip: '💡 提示：若匯出檔案過大，請嘗試調低【輸出尺寸】、降低色彩數，或改用 ZIP (WebP) 格式。',
         fmtApng: 'APNG (高畫質動態PNG)', fmtGif: 'GIF (相容性最佳動圖)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
         fmtJson: 'JSON 專案檔 (動畫數據與 Base64)',
         compLossless: '0 (無失真 / 最高畫質)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
@@ -76,9 +77,10 @@
         currFrame: 'Frame {n}', rmNode: 'Remove Node', addNode: 'Add Node', nextEasing: 'Easing to next node',
         autoGen: 'Auto Generate Gradient (Overwrites track)', genEasing: 'Generation Easing', clearTrack: 'Reset Track Effects',
         exportSettingsBtn: 'Export / Download', exportSettingsTitle: 'Export Settings', format: 'Format',
-        colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG)', outScale: 'Output Scale', outFrames: 'Output Frames',
+        colors: 'Colors (Compression)', qualityLabel: 'Output Quality', bgColor: 'Background Color (for GIF/JPEG)', outScale: 'Output Scale', outFrames: 'Output Frames',
         origFrames: 'Keep Original Frame Count', customFrames: 'Custom Frame Count', framesUnit: 'frames (Auto-resample)',
         exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Action failed. Please check the file.',
+        exportTip: '💡 Tip: If the file is too large, reduce Output Scale, lower Colors, or export as ZIP (WebP).',
         fmtApng: 'APNG (High Quality)', fmtGif: 'GIF (Best Compatibility)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
         fmtJson: 'JSON Project (Data & Base64 Image)',
         compLossless: 'Lossless (Best Quality)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
@@ -103,9 +105,10 @@
         currFrame: '第 {n} フレーム', rmNode: 'ノード削除', addNode: 'ノード追加', nextEasing: '次のノードへのイージング',
         autoGen: '一括グラデーション生成 (上書き)', genEasing: '生成のイージング', clearTrack: 'このトラックをリセット',
         exportSettingsBtn: 'エクスポート', exportSettingsTitle: 'エクスポート設定', format: '形式',
-        colors: '色数と圧縮', bgColor: '背景色 (GIF/JPEG用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
+        colors: '色数と圧縮', qualityLabel: '出力品質 (画質)', bgColor: '背景色 (GIF/JPEG用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
         origFrames: '元のフレーム数を維持', customFrames: 'カスタムフレーム数', framesUnit: 'フレーム (自動補間)',
         exporting: 'エンコード中...', confirmExport: 'エクスポート実行', exportFailed: '失敗しました。',
+        exportTip: '💡 ヒント: ファイルサイズが大きい場合は、出力サイズや色数を下げるか、ZIP (WebP) をお試しください。',
         fmtApng: 'APNG (高品質)', fmtGif: 'GIF (高互換性)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON プロジェクト (データと Base64)',
         compLossless: 'ロスレス (最高画質)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
@@ -130,9 +133,10 @@
         currFrame: '{n} 프레임', rmNode: '노드 제거', addNode: '노드 추가', nextEasing: '다음 노드로의 이징',
         autoGen: '일괄 그라데이션 생성 (덮어쓰기)', genEasing: '생성 이징', clearTrack: '트랙 효과 초기화',
         exportSettingsBtn: '내보내기 / 다운로드', exportSettingsTitle: '내보내기 설정', format: '형식',
-        colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
+        colors: '색상 및 압축', qualityLabel: '출력 품질', bgColor: '배경색 (GIF/JPEG 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
         origFrames: '원본 프레임 유지', customFrames: '사용자 지정 프레임', framesUnit: '프레임 (자동 리샘플링)',
         exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '실패했습니다.',
+        exportTip: '💡 팁: 파일이 너무 크면 출력 크기나 색상 수를 줄이거나 ZIP (WebP) 형식을 사용하세요.',
         fmtApng: 'APNG', fmtGif: 'GIF', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON 프로젝트 (데이터 및 Base64)',
         compLossless: '무손실', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
@@ -237,6 +241,7 @@
       const [exportConfig, setExportConfig] = useState({
         format: 'apng', // apng, gif, zip-png, zip-jpg, zip-webp, json
         compression: 0, 
+        quality: 85,    // Added Quality for WebP/JPG
         scale: 1.0,     
         bgColor: '#ffffff',
         frameMode: 'original', 
@@ -292,7 +297,6 @@
       useEffect(() => { currentFrameIndexRef.current = currentFrameIndex; }, [currentFrameIndex]);
       useEffect(() => { selectedKeyframeRef.current = selectedKeyframe; }, [selectedKeyframe]);
 
-      // 支援額外傳入載入好的全域屬性 (用於 JSON 專案檔讀取)
       const pushInitialState = (newFrames, initGlobals = null) => {
         const initialState = {
           frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
@@ -508,7 +512,6 @@
                     framesArr.push(buildFrameObj(frameCanvas, Math.round(1000 / targetFPS)));
 
                     currentTime += timeStep;
-                    // 限制最高 300 幀避免記憶體崩潰
                     if (currentTime <= duration && framesArr.length < 300) {
                         video.currentTime = currentTime;
                     } else {
@@ -595,7 +598,6 @@
           let loadedGlobals = null;
           let isJsonImport = false;
 
-          // 判斷是否為 JSON 專案檔匯入
           if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
              isJsonImport = true;
              const text = await file.text();
@@ -658,7 +660,6 @@
                   setHistoryPointer(newHistory.length - 1);
               }
           } else {
-              // 完整載入 (新檔 或 JSON 專案還原)
               if (loadedGlobals) {
                  setGlobalOpacity(loadedGlobals.opacity ?? 1.0);
                  setGlobalHue(loadedGlobals.hue ?? 0);
@@ -681,7 +682,6 @@
               setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
               setSelectedFrames([]); 
               
-              // 對齊 globals 結構存入 history
               const mappedGlobals = loadedGlobals ? {
                  globalOpacity: loadedGlobals.opacity ?? 1.0,
                  globalHue: loadedGlobals.hue ?? 0,
@@ -1113,23 +1113,6 @@
         window.addEventListener('mouseup', onMouseUp);
       };
 
-      const handleTrimStart = () => {
-          if (currentFrameIndex <= 0 || frames.length <= 1) return;
-          isRestoring.current = true;
-          setFrames(prev => prev.slice(currentFrameIndex));
-          setCurrentFrameIndex(0);
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleTrimEnd = () => {
-          if (currentFrameIndex >= frames.length - 1 || frames.length <= 1) return;
-          isRestoring.current = true;
-          setFrames(prev => prev.slice(0, currentFrameIndex + 1));
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
       const updateFrameFilter = (key, value) => {
         setFrames(prevFrames => {
           const newFrames = [...prevFrames];
@@ -1334,7 +1317,7 @@
         const rawBytes = baseW * baseH * 4 * fCount;
         let multiplier = 0.25; 
         if (exportConfig.format === 'json') return rawBytes * 0.15; 
-        if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
+        if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = (exportConfig.quality / 100) * 0.05;
         else if (exportConfig.compression === 256) multiplier = 0.05;
         else if (exportConfig.compression === 128) multiplier = 0.035;
         else if (exportConfig.compression === 64) multiplier = 0.025;
@@ -1468,19 +1451,22 @@
                 const { ctx, w, h, canvas } = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, needsFillBg ? exportConfig.bgColor : null);
                 if (i === 0) { exportW = w; exportH = h; }
 
+                // 核心修復：確保取得完整複製的新緩衝區，避免因為記憶體共用導致的容量暴增
+                const imgData = ctx.getImageData(0, 0, exportW, exportH);
+                const pixels = new Uint8Array(imgData.data); 
+
                 if (exportConfig.format === 'apng') {
-                    imgs.push(ctx.getImageData(0, 0, exportW, exportH).data.buffer);
+                    imgs.push(pixels.buffer); // 精準寫入 ArrayBuffer，解決容量過大問題
                     delays.push(pt.delay);
                 } else if (exportConfig.format === 'gif') {
-                    const imgData = ctx.getImageData(0, 0, exportW, exportH);
                     const cnum = exportConfig.compression === 0 ? 256 : exportConfig.compression;
-                    const palette = gifencModule.quantize(imgData.data, cnum);
-                    const index = gifencModule.applyPalette(imgData.data, palette);
+                    const palette = gifencModule.quantize(pixels, cnum);
+                    const index = gifencModule.applyPalette(pixels, palette);
                     gif.writeFrame(index, exportW, exportH, { palette, delay: pt.delay });
                 } else {
                     const mimeType = isJpeg ? 'image/jpeg' : (isWebp ? 'image/webp' : 'image/png');
                     const ext = isJpeg ? 'jpg' : (isWebp ? 'webp' : 'png');
-                    const quality = isJpeg ? 0.9 : 0.85;
+                    const quality = (isJpeg || isWebp) ? (exportConfig.quality / 100) : undefined;
                     const buffer = await new Promise(resolve => {
                         canvas.toBlob(blob => {
                             const reader = new FileReader();
@@ -1603,7 +1589,7 @@
                   {/* Format */}
                   <div>
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('format')}</label>
-                    <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                    <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                       <option value="apng">{t('fmtApng')}</option>
                       <option value="gif">{t('fmtGif')}</option>
                       <option value="json">{t('fmtJson')}</option>
@@ -1613,11 +1599,11 @@
                     </select>
                   </div>
                   
-                  {/* Compression */}
+                  {/* Compression & Quality */}
                   {['apng', 'gif'].includes(exportConfig.format) && (
                     <div>
                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('colors')}</label>
-                      <select value={exportConfig.compression} onChange={e => setExportConfig({...exportConfig, compression: parseInt(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                      <select value={exportConfig.compression} onChange={e => setExportConfig({...exportConfig, compression: parseInt(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value={0}>{t('compLossless')}</option>
                         <option value={256}>{t('comp256')}</option>
                         <option value={128}>{t('comp128')}</option>
@@ -1625,6 +1611,13 @@
                         <option value={32}>{t('comp32')}</option>
                         <option value={16}>{t('comp16')}</option>
                       </select>
+                    </div>
+                  )}
+
+                  {['zip-jpg', 'zip-webp'].includes(exportConfig.format) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('qualityLabel')} ({exportConfig.quality}%)</label>
+                      <input type="range" min="1" max="100" value={exportConfig.quality} onChange={e => setExportConfig({...exportConfig, quality: parseInt(e.target.value)})} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-500" />
                     </div>
                   )}
 
@@ -1643,7 +1636,7 @@
                   {!isJsonSelected && (
                     <div>
                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('outScale')}</label>
-                      <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                      <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value={1.0}>{t('size100')}</option>
                         <option value={0.75}>{t('size75')}</option>
                         <option value={0.5}>{t('size50')}</option>
@@ -1680,6 +1673,13 @@
                      <span className="text-xs font-bold text-blue-800 dark:text-blue-300">{t('estSize')}</span>
                      <span className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400">{formatBytes(getEstimatedSize())}</span>
                   </div>
+                  
+                  {/* File Size Tip */}
+                  {(!isJsonSelected && exportConfig.scale === 1.0 && exportConfig.compression === 0) && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800 mt-2">
+                       <span className="text-[11px] text-amber-700 dark:text-amber-300 leading-tight block">{t('exportTip')}</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-3">
