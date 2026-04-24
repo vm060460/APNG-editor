@@ -55,6 +55,7 @@
         exportTip: '💡 提示：若匯出檔案過大，請嘗試調低【輸出尺寸】、降低色彩數，或改用 ZIP (WebP) 格式。',
         fmtApng: 'APNG (高畫質動態PNG)', fmtGif: 'GIF (相容性最佳動圖)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
         fmtJson: 'JSON 專案檔 (動畫數據與 Base64)',
+        fmtWebm: 'WEBM 影片 (超高壓縮/極小檔案)',
         compLossless: '0 (無失真 / 最高畫質)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
         size100: '100% (原始尺寸)', size75: '75% (有效縮小檔案)', size50: '50% (大幅縮小檔案)', size25: '25% (極小預覽)',
         none: '無 (不處理)', green: '去除綠幕', black: '去除純黑', white: '去除純白', customColor: '自訂顏色',
@@ -83,6 +84,7 @@
         exportTip: '💡 Tip: If the file is too large, reduce Output Scale, lower Colors, or export as ZIP (WebP).',
         fmtApng: 'APNG (High Quality)', fmtGif: 'GIF (Best Compatibility)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
         fmtJson: 'JSON Project (Data & Base64 Image)',
+        fmtWebm: 'WEBM Video (Ultra Compressed/Tiny)',
         compLossless: 'Lossless (Best Quality)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
         size100: '100% Size', size75: '75% Size', size50: '50% Size', size25: '25% Size',
         none: 'None', green: 'Remove Green', black: 'Remove Black', white: 'Remove White', customColor: 'Custom Color',
@@ -111,6 +113,7 @@
         exportTip: '💡 ヒント: ファイルサイズが大きい場合は、出力サイズや色数を下げるか、ZIP (WebP) をお試しください。',
         fmtApng: 'APNG (高品質)', fmtGif: 'GIF (高互換性)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON プロジェクト (データと Base64)',
+        fmtWebm: 'WEBM 動画 (超高圧縮/最小サイズ)',
         compLossless: 'ロスレス (最高画質)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: 'なし', green: '緑を透過', black: '黒を透過', white: '白を透過', customColor: 'カスタム色',
@@ -139,6 +142,7 @@
         exportTip: '💡 팁: 파일이 너무 크면 출력 크기나 색상 수를 줄이거나 ZIP (WebP) 형식을 사용하세요.',
         fmtApng: 'APNG', fmtGif: 'GIF', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON 프로젝트 (데이터 및 Base64)',
+        fmtWebm: 'WEBM 동영상 (초고압축/초소형)',
         compLossless: '무손실', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: '없음', green: '녹색 제거', black: '검은색 제거', white: '흰색 제거', customColor: '사용자 지정 색상',
@@ -259,6 +263,7 @@
       const [draggingKeyframe, setDraggingKeyframe] = useState(null); 
       const [isLoading, setIsLoading] = useState(false);
       const [isExporting, setIsExporting] = useState(false);
+      const [exportProgress, setExportProgress] = useState(0);
       const [error, setError] = useState(null);
       
       const canvasRef = useRef(null);
@@ -1315,14 +1320,21 @@
             fCount = Math.max(2, exportConfig.customFrameCount);
         }
         const rawBytes = baseW * baseH * 4 * fCount;
-        let multiplier = 0.25; 
+        let multiplier = 0.35; // APNG 預設無損壓縮率
+        
         if (exportConfig.format === 'json') return rawBytes * 0.15; 
+        if (exportConfig.format === 'webm-video') return rawBytes * 0.01; // WEBM 的壓縮率極高
         if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = (exportConfig.quality / 100) * 0.05;
-        else if (exportConfig.compression === 256) multiplier = 0.05;
-        else if (exportConfig.compression === 128) multiplier = 0.035;
-        else if (exportConfig.compression === 64) multiplier = 0.025;
-        else if (exportConfig.compression === 32) multiplier = 0.015;
-        else if (exportConfig.compression === 16) multiplier = 0.01;
+        else if (exportConfig.format === 'gif') {
+            multiplier = exportConfig.compression === 0 ? 0.15 : (exportConfig.compression / 256) * 0.10;
+        }
+        else { // apng or zip-png
+            if (exportConfig.compression === 256) multiplier = 0.15;
+            else if (exportConfig.compression === 128) multiplier = 0.10;
+            else if (exportConfig.compression === 64) multiplier = 0.06;
+            else if (exportConfig.compression === 32) multiplier = 0.04;
+            else if (exportConfig.compression === 16) multiplier = 0.02;
+        }
         return rawBytes * multiplier;
       };
 
@@ -1361,6 +1373,7 @@
 
       const handleConfirmExport = async () => {
         setIsExporting(true);
+        setExportProgress(0);
         try {
             await new Promise(resolve => setTimeout(resolve, 50));
             
@@ -1429,6 +1442,59 @@
                 }
             }
 
+            // --- WEBM Export (即時錄製模式) ---
+            if (exportConfig.format === 'webm-video') {
+                const { w: exportW, h: exportH } = getExportCanvasForFrame(exportPoints[0].baseIndex, exportPoints[0].floatIndex);
+                const canvas = document.createElement('canvas');
+                canvas.width = exportW; canvas.height = exportH;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = exportConfig.bgColor || '#ffffff';
+                ctx.fillRect(0, 0, exportW, exportH);
+
+                const stream = canvas.captureStream(); 
+                const options = { mimeType: 'video/webm; codecs=vp9' };
+                const mime = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'video/webm';
+                const recorder = new MediaRecorder(stream, { mimeType: mime });
+                
+                const chunks = [];
+                recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                
+                recorder.start();
+
+                let i = 0;
+                const drawNextFrame = () => {
+                    if (i >= exportPoints.length) {
+                        setTimeout(() => {
+                            if(recorder.state !== 'inactive') recorder.stop();
+                        }, 50); 
+                        return;
+                    }
+                    
+                    const pt = exportPoints[i];
+                    const exportCtx = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, exportConfig.bgColor).ctx;
+                    ctx.drawImage(exportCtx.canvas, 0, 0);
+                    
+                    setExportProgress(Math.round((i / exportPoints.length) * 100));
+                    i++;
+                    setTimeout(drawNextFrame, pt.delay);
+                };
+                
+                drawNextFrame();
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: mime });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `${originalFileName}.webm`; a.click();
+                    URL.revokeObjectURL(url);
+                    setIsExportModalOpen(false);
+                    setIsExporting(false);
+                    setExportProgress(0);
+                };
+                return; 
+            }
+
             let gifencModule;
             if (exportConfig.format === 'gif') {
                 gifencModule = await import('https://esm.sh/gifenc@1.0.3');
@@ -1451,12 +1517,13 @@
                 const { ctx, w, h, canvas } = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, needsFillBg ? exportConfig.bgColor : null);
                 if (i === 0) { exportW = w; exportH = h; }
 
-                // 核心修復：確保取得完整複製的新緩衝區，避免因為記憶體共用導致的容量暴增
+                setExportProgress(Math.round((i / exportPoints.length) * 50));
+
                 const imgData = ctx.getImageData(0, 0, exportW, exportH);
                 const pixels = new Uint8Array(imgData.data); 
 
                 if (exportConfig.format === 'apng') {
-                    imgs.push(pixels.buffer); // 精準寫入 ArrayBuffer，解決容量過大問題
+                    imgs.push(pixels.buffer); 
                     delays.push(pt.delay);
                 } else if (exportConfig.format === 'gif') {
                     const cnum = exportConfig.compression === 0 ? 256 : exportConfig.compression;
@@ -1478,6 +1545,8 @@
                     zipData[`frame_${idxStr}.${ext}`] = buffer;
                 }
             }
+
+            setExportProgress(75);
 
             let blob;
             let filenameExt;
@@ -1525,6 +1594,8 @@
                 filenameExt = 'frames.zip';
             }
 
+            setExportProgress(100);
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1538,6 +1609,7 @@
             setError(t('exportFailed')); 
         } finally { 
             setIsExporting(false); 
+            setExportProgress(0);
         }
       };
 
@@ -1591,6 +1663,7 @@
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('format')}</label>
                     <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                       <option value="apng">{t('fmtApng')}</option>
+                      <option value="webm-video">{t('fmtWebm')}</option>
                       <option value="gif">{t('fmtGif')}</option>
                       <option value="json">{t('fmtJson')}</option>
                       <option value="zip-png">{t('fmtZipPng')}</option>
@@ -1675,7 +1748,7 @@
                   </div>
                   
                   {/* File Size Tip */}
-                  {(!isJsonSelected && exportConfig.scale === 1.0 && exportConfig.compression === 0) && (
+                  {(!isJsonSelected && exportConfig.format !== 'webm-video' && exportConfig.scale === 1.0 && exportConfig.compression === 0) && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800 mt-2">
                        <span className="text-[11px] text-amber-700 dark:text-amber-300 leading-tight block">{t('exportTip')}</span>
                     </div>
@@ -1686,9 +1759,12 @@
                   <button onClick={() => setIsExportModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                     {t('cancel')}
                   </button>
-                  <button onClick={handleConfirmExport} disabled={isExporting} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md">
-                    {isExporting ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></span> : <Download className="w-4 h-4"/>}
-                    {isExporting ? t('exporting') : t('confirmExport')}
+                  <button onClick={handleConfirmExport} disabled={isExporting} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md relative overflow-hidden">
+                    {isExporting && <div className="absolute left-0 top-0 bottom-0 bg-blue-800 transition-all duration-300" style={{width: `${exportProgress}%`}}></div>}
+                    <span className="relative flex items-center gap-2">
+                        {isExporting ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></span> : <Download className="w-4 h-4"/>}
+                        {isExporting ? `${t('exporting')} ${exportProgress}%` : t('confirmExport')}
+                    </span>
                   </button>
                 </div>
               </div>
