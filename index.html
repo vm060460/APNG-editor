@@ -122,7 +122,7 @@
         selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
         alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효과 편집',
-        animLength: '애니메이션 길이', autoFx: '자동 효과', sec: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
+        animLength: '애니메이션 길이', autoFx: '자동 효과', 초: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
         flip: '반전 (Flip)', flipH: '수평 반전', flipV: '수직 반전', bgRemover: '배경 제거', tolerance: '허용 오차',
         globalFilters: '글로벌 필터', opacity: '불투명도', hue: '색조', sat: '채도', contrast: '대비', invert: '반전',
         scale: '비율', rotate: '회전', translate: '이동', color: '색상', livePreview: '슬라이더로 실시간 미리보기',
@@ -1333,21 +1333,36 @@
         if (exportConfig.frameMode === 'custom') {
             fCount = Math.max(2, exportConfig.customFrameCount);
         }
+        
+        let totalDurationMs = frames.reduce((sum, f) => sum + f.delay, 0);
+        if (totalDurationMs === 0) totalDurationMs = 1000;
+        const totalSeconds = totalDurationMs / speed / 1000;
+
         const rawBytes = baseW * baseH * 4 * fCount;
+        
+        // 特殊處理 WebM：因為指定固定 Bitrate (5Mbps)，大小直接由時長與目標流量決定
+        if (exportConfig.format === 'webm') {
+             // 5Mbps = 625,000 Bytes/s，考量到動態與靜態平衡，以 400KB/s 作為平均預估，並且設定 1KB 的最低下限
+             return Math.max(totalSeconds * 400_000, 1024); 
+        }
+
         let multiplier = 0.25; 
         
-        // 更精準預估檔案大小，修正大檔案落差
-        if (exportConfig.format === 'json') multiplier = 0.15; 
-        else if (exportConfig.format === 'webm') multiplier = 0.005; // 影片壓縮率極高
-        else if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
+        // 更精準預估檔案大小，根據編碼器實際行為調整係數
+        if (exportConfig.format === 'json') multiplier = 0.3; 
+        else if (exportConfig.format === 'zip-png') multiplier = 0.2; // 單純的 PNG Deflate
+        else if (exportConfig.format === 'zip-jpg') multiplier = 0.06;
+        else if (exportConfig.format === 'zip-webp') multiplier = 0.04;
         else if (exportConfig.format === 'apng') {
-            if (exportConfig.compression === 0) multiplier = 0.9; // 無失真 APNG 非常大
-            else if (exportConfig.compression === 256) multiplier = 0.2;
-            else if (exportConfig.compression === 128) multiplier = 0.15;
-            else if (exportConfig.compression === 64) multiplier = 0.1;
-            else multiplier = 0.05;
+            if (exportConfig.compression === 0) multiplier = 0.25; // 無失真但有 Deflate 壓縮
+            else if (exportConfig.compression === 256) multiplier = 0.05; // 8-bit (1 byte/pixel)
+            else if (exportConfig.compression === 128) multiplier = 0.04;
+            else if (exportConfig.compression === 64) multiplier = 0.03;
+            else multiplier = 0.015;
         }
-        else if (exportConfig.format === 'gif') multiplier = 0.15;
+        else if (exportConfig.format === 'gif') {
+            multiplier = 0.08; // GIF 的 LZW 演算法
+        }
 
         return rawBytes * multiplier;
       };
