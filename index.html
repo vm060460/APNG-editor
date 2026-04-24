@@ -30,13 +30,13 @@
       FlipHorizontal, FlipVertical, Copy, ArrowLeftRight, Keyboard, Plus, Moon, Sun, Languages, Info, FileOutput, Scissors
     } from 'https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0';
 
-    let parseGIF, decompressFrames, UPNG, fflate;
+    let parseGIF, decompressFrames, UPNG, fflate, Muxer, ArrayBufferTarget;
 
     // === 多國語言字典 ===
     const i18n = {
       'zh-TW': {
         title: '動態影像編輯器', author: '作者:闕雪，X:@vm060460', shortcuts: '鍵盤快捷鍵', playPause: '播放/暫停', prevNext: '切換影格', 
-        delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫 / 影片 / 專案', dragDrop: '拖曳檔案至此 (支援影片與 JSON 專案檔)',
+        delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫 / 影片 / 專案', dragDrop: '拖曳檔案至此 (保留原始畫質與大小)',
         gridView: '網格檢視', canvasView: '返回畫布', replace: '換圖', cropExpand: '裁切/擴展', clear: '清除',
         selected: '已選取', frames: '個影格', selectAll: '全選', deselect: '取消選取', copySelected: '複製所選', delSelected: '刪除所選',
         reverseAll: '全部倒放', selectedDelay: '所選停留', set: '設定', totalLen: '總長度 (等比例)', current: '目前',
@@ -49,21 +49,21 @@
         currFrame: '第 {n} 格', rmNode: '移除節點', addNode: '插入節點', nextEasing: '前往下個節點的曲線速度',
         autoGen: '快速產生整段漸變 (將覆寫所有節點)', genEasing: '生成使用之曲線', clearTrack: '清除此軌道所有特效',
         exportSettingsBtn: '匯出 / 下載', exportSettingsTitle: '匯出設定', format: '匯出格式',
-        colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF / JPEG 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
+        colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF/JPEG/WebM 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
         origFrames: '維持原始影格數', customFrames: '自訂輸出影格數', framesUnit: '格 (自動平滑重採樣)',
         exporting: '處理與編碼中 (若為影片可能需要較長時間)...', confirmExport: '確認匯出', exportFailed: '匯出或載入失敗，請檢查檔案。',
-        fmtApng: 'APNG (高畫質動態PNG)', fmtGif: 'GIF (相容性最佳動圖)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
+        fmtApng: 'APNG (高畫質動態PNG / 支援透明)', fmtGif: 'GIF (相容性最佳動圖)', fmtWebm: 'WebM (高畫質影片 / 無透明底)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
         fmtJson: 'JSON 專案檔 (動畫數據與 Base64)',
-        compLossless: '0 (無失真 / 最高畫質)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
+        compLossless: '0 (無失真 / 檔案極大)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
         size100: '100% (原始尺寸)', size75: '75% (有效縮小檔案)', size50: '50% (大幅縮小檔案)', size25: '25% (極小預覽)',
         none: '無 (不處理)', green: '去除綠幕', black: '去除純黑', white: '去除純白', customColor: '自訂顏色',
         noKfs: '~ 目前沒有特效關鍵影格，可由右側【編輯特效】面板增加漸變 ~', trackFrame: '影格',
         addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格', loop: '循環', speed: '倍速', globalCtrl: '總體控制',
-        timelineTools: '時間軸工具', trimStart: '裁切起點 (刪除前方)', trimEnd: '裁切終點 (刪除後方)', cantDelAll: '不能刪除所有影格'
+        timelineTools: '時間軸工具', trimStart: '裁切起點 (刪除前方)', trimEnd: '裁切終點 (刪除後方)', cantDelAll: '不能刪除所有影格', estSize: '預估檔案大小'
       },
       'en': {
         title: 'Motion Image Editor', author: 'Author: QueXue, X:@vm060460', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
-        delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Video/Project', dragDrop: 'Drag & Drop or Click (Video & JSON supported)',
+        delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Video/Project', dragDrop: 'Drag & Drop or Click (Original Quality)',
         gridView: 'Grid View', canvasView: 'Canvas', replace: 'Replace', cropExpand: 'Crop/Expand', clear: 'Clear',
         selected: 'Selected', frames: 'frames', selectAll: 'Select All', deselect: 'Deselect', copySelected: 'Duplicate', delSelected: 'Delete',
         reverseAll: 'Reverse All', selectedDelay: 'Selected Delay', set: 'Set', totalLen: 'Total Length (Prop.)', current: 'Current',
@@ -76,21 +76,21 @@
         currFrame: 'Frame {n}', rmNode: 'Remove Node', addNode: 'Add Node', nextEasing: 'Easing to next node',
         autoGen: 'Auto Generate Gradient (Overwrites track)', genEasing: 'Generation Easing', clearTrack: 'Reset Track Effects',
         exportSettingsBtn: 'Export / Download', exportSettingsTitle: 'Export Settings', format: 'Format',
-        colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG)', outScale: 'Output Scale', outFrames: 'Output Frames',
+        colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG/WebM)', outScale: 'Output Scale', outFrames: 'Output Frames',
         origFrames: 'Keep Original Frame Count', customFrames: 'Custom Frame Count', framesUnit: 'frames (Auto-resample)',
         exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Action failed. Please check the file.',
-        fmtApng: 'APNG (High Quality)', fmtGif: 'GIF (Best Compatibility)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
+        fmtApng: 'APNG (High Quality / Transparent)', fmtGif: 'GIF (Best Compatibility)', fmtWebm: 'WebM (HQ Video / No Transparency)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
         fmtJson: 'JSON Project (Data & Base64 Image)',
-        compLossless: 'Lossless (Best Quality)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
+        compLossless: 'Lossless (Huge Size)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
         size100: '100% Size', size75: '75% Size', size50: '50% Size', size25: '25% Size',
         none: 'None', green: 'Remove Green', black: 'Remove Black', white: 'Remove White', customColor: 'Custom Color',
         noKfs: '~ No keyframes yet. Add them in the [Edit FX] panel. ~', trackFrame: 'Frames',
         addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames', loop: 'Loop', speed: 'Speed', globalCtrl: 'Global Control',
-        timelineTools: 'Timeline Tools', trimStart: 'Set Trim Start', trimEnd: 'Set Trim End', cantDelAll: 'Cannot delete all frames'
+        timelineTools: 'Timeline Tools', trimStart: 'Set Trim Start', trimEnd: 'Set Trim End', cantDelAll: 'Cannot delete all frames', estSize: 'Estimated Size'
       },
       'ja': {
         title: '動的画像エディタ', author: '作成者: 闕雪, X:@vm060460', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
-        delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/動画/PJ読込', dragDrop: 'ドラッグ＆ドロップ (動画・JSON対応)',
+        delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/動画/PJ読込', dragDrop: 'ドラッグ＆ドロップ (元の画質とサイズ)',
         gridView: 'グリッド表示', canvasView: 'キャンバス表示', replace: '置換', cropExpand: 'トリミング/拡張', clear: 'クリア',
         selected: '選択中', frames: 'フレーム', selectAll: 'すべて選択', deselect: '選択解除', copySelected: '複製', delSelected: '削除',
         reverseAll: '逆再生', selectedDelay: '選択の遅延', set: '適用', totalLen: '合計時間 (比例)', current: '現在',
@@ -103,21 +103,21 @@
         currFrame: '第 {n} フレーム', rmNode: 'ノード削除', addNode: 'ノード追加', nextEasing: '次のノードへのイージング',
         autoGen: '一括グラデーション生成 (上書き)', genEasing: '生成のイージング', clearTrack: 'このトラックをリセット',
         exportSettingsBtn: 'エクスポート', exportSettingsTitle: 'エクスポート設定', format: '形式',
-        colors: '色数と圧縮', bgColor: '背景色 (GIF/JPEG用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
+        colors: '色数と圧縮', bgColor: '背景色 (GIF/JPEG/WebM用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
         origFrames: '元のフレーム数を維持', customFrames: 'カスタムフレーム数', framesUnit: 'フレーム (自動補間)',
         exporting: 'エンコード中...', confirmExport: 'エクスポート実行', exportFailed: '失敗しました。',
-        fmtApng: 'APNG (高品質)', fmtGif: 'GIF (高互換性)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
+        fmtApng: 'APNG (高品質 / 透過対応)', fmtGif: 'GIF (高互換性)', fmtWebm: 'WebM (高品質動画 / 透過不可)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON プロジェクト (データと Base64)',
-        compLossless: 'ロスレス (最高画質)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
+        compLossless: 'ロスレス (特大サイズ)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: 'なし', green: '緑を透過', black: '黒を透過', white: '白を透過', customColor: 'カスタム色',
         noKfs: '〜 キーフレームがありません。[エフェクト編集]パネルで追加してください 〜', trackFrame: 'フレーム',
         addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入', loop: 'ループ', speed: '倍速', globalCtrl: '全体制御',
-        timelineTools: 'タイムラインツール', trimStart: 'ここを開始位置にする', trimEnd: 'ここを終了位置にする', cantDelAll: '全フレームの削除はできません'
+        timelineTools: 'タイムラインツール', trimStart: 'ここを開始位置にする', trimEnd: 'ここを終了位置にする', cantDelAll: '全フレームの削除はできません', estSize: '予想サイズ'
       },
       'ko': {
         title: '동적 이미지 편집기', author: '작성자: 闕雪, X:@vm060460', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
-        delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/동영상/프로젝트 가져오기', dragDrop: '드래그 앤 드롭 (동영상 및 JSON 지원)',
+        delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/동영상/프로젝트 가져오기', dragDrop: '드래그 앤 드롭 (원본 화질 및 크기)',
         gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
         selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
@@ -130,17 +130,17 @@
         currFrame: '{n} 프레임', rmNode: '노드 제거', addNode: '노드 추가', nextEasing: '다음 노드로의 이징',
         autoGen: '일괄 그라데이션 생성 (덮어쓰기)', genEasing: '생성 이징', clearTrack: '트랙 효과 초기화',
         exportSettingsBtn: '내보내기 / 다운로드', exportSettingsTitle: '내보내기 설정', format: '형식',
-        colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
+        colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG/WebM 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
         origFrames: '원본 프레임 유지', customFrames: '사용자 지정 프레임', framesUnit: '프레임 (자동 리샘플링)',
         exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '실패했습니다.',
-        fmtApng: 'APNG', fmtGif: 'GIF', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
+        fmtApng: 'APNG (고품질 / 투명 지원)', fmtGif: 'GIF', fmtWebm: 'WebM (고화질 동영상 / 투명 불가)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
         fmtJson: 'JSON 프로젝트 (데이터 및 Base64)',
-        compLossless: '무손실', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
+        compLossless: '무손실 (매우 큰 파일)', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: '없음', green: '녹색 제거', black: '검은색 제거', white: '흰색 제거', customColor: '사용자 지정 색상',
         noKfs: '~ 키프레임이 없습니다. [효과 편집] 패널에서 추가하세요 ~', trackFrame: '프레임',
         addTimeLen: '연장 시간 삽입', addStart: '시작에 추가', addEnd: '끝에 추가', insertFrames: '프레임 삽입', loop: '반복', speed: '배속', globalCtrl: '전체 제어',
-        timelineTools: '타임라인 도구', trimStart: '자르기 시작 위치', trimEnd: '자르기 종료 위치', cantDelAll: '모든 프레임을 삭제할 수 없습니다'
+        timelineTools: '타임라인 도구', trimStart: '자르기 시작 위치', trimEnd: '자르기 종료 위치', cantDelAll: '모든 프레임을 삭제할 수 없습니다', estSize: '예상 크기'
       }
     };
 
@@ -235,10 +235,10 @@
       // === Export Modal State ===
       const [isExportModalOpen, setIsExportModalOpen] = useState(false);
       const [exportConfig, setExportConfig] = useState({
-        format: 'apng', // apng, gif, zip-png, zip-jpg, zip-webp, json
+        format: 'apng', // 預設改回 apng
         compression: 0, 
         scale: 1.0,     
-        bgColor: '#ffffff',
+        bgColor: '#000000',
         frameMode: 'original', 
         customFrameCount: 30
       });
@@ -274,6 +274,12 @@
             const gifuctModule = await dynamicImport('https://esm.sh/gifuct-js@2.1.2?bundle');
             const upngModule = await dynamicImport('https://esm.sh/upng-js@2.1.0?bundle');
             const fflateModule = await dynamicImport('https://esm.sh/fflate@0.8.2?bundle');
+            
+            try {
+              const webmMuxerModule = await dynamicImport('https://esm.sh/webm-muxer@5.0.2');
+              Muxer = webmMuxerModule.Muxer || webmMuxerModule.default?.Muxer;
+              ArrayBufferTarget = webmMuxerModule.ArrayBufferTarget || webmMuxerModule.default?.ArrayBufferTarget;
+            } catch (err) { console.warn("WebM Muxer not loaded", err); }
 
             parseGIF = gifuctModule.parseGIF || gifuctModule.default?.parseGIF;
             decompressFrames = gifuctModule.decompressFrames || gifuctModule.default?.decompressFrames;
@@ -473,24 +479,20 @@
       const extractVideoFrames = (file) => {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
-            video.autoplay = false;
+            video.autoplay = true;
             video.muted = true;
             video.playsInline = true;
             video.src = URL.createObjectURL(file);
             const framesArr = [];
-            const targetFPS = 12; 
+            // 使用 30FPS 保留影片順暢度與高畫質
+            const targetFPS = 30; 
             const timeStep = 1 / targetFPS;
 
             video.onloadeddata = () => {
                 const duration = video.duration;
+                // 不限制 MAX_DIM，完整保留原始畫質與尺寸
                 let width = video.videoWidth;
                 let height = video.videoHeight;
-                const MAX_DIM = 1080; 
-                if (width > MAX_DIM || height > MAX_DIM) {
-                    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
-                    width = Math.round(width * ratio);
-                    height = Math.round(height * ratio);
-                }
 
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
@@ -508,8 +510,8 @@
                     framesArr.push(buildFrameObj(frameCanvas, Math.round(1000 / targetFPS)));
 
                     currentTime += timeStep;
-                    // 限制最高 300 幀避免記憶體崩潰
-                    if (currentTime <= duration && framesArr.length < 300) {
+                    // 為了避免記憶體溢出，將幀數限制調高至 900 幀 (約 30 秒)
+                    if (currentTime <= duration && framesArr.length < 900) {
                         video.currentTime = currentTime;
                     } else {
                         URL.revokeObjectURL(video.src);
@@ -1333,13 +1335,20 @@
         }
         const rawBytes = baseW * baseH * 4 * fCount;
         let multiplier = 0.25; 
-        if (exportConfig.format === 'json') return rawBytes * 0.15; 
-        if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
-        else if (exportConfig.compression === 256) multiplier = 0.05;
-        else if (exportConfig.compression === 128) multiplier = 0.035;
-        else if (exportConfig.compression === 64) multiplier = 0.025;
-        else if (exportConfig.compression === 32) multiplier = 0.015;
-        else if (exportConfig.compression === 16) multiplier = 0.01;
+        
+        // 更精準預估檔案大小，修正大檔案落差
+        if (exportConfig.format === 'json') multiplier = 0.15; 
+        else if (exportConfig.format === 'webm') multiplier = 0.005; // 影片壓縮率極高
+        else if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
+        else if (exportConfig.format === 'apng') {
+            if (exportConfig.compression === 0) multiplier = 0.9; // 無失真 APNG 非常大
+            else if (exportConfig.compression === 256) multiplier = 0.2;
+            else if (exportConfig.compression === 128) multiplier = 0.15;
+            else if (exportConfig.compression === 64) multiplier = 0.1;
+            else multiplier = 0.05;
+        }
+        else if (exportConfig.format === 'gif') multiplier = 0.15;
+
         return rawBytes * multiplier;
       };
 
@@ -1351,8 +1360,14 @@
       const getExportCanvasForFrame = (baseIndex, floatIndex, fillBgColor = null) => {
         const frame = frames[baseIndex]; 
         const orgW = frame.canvas.width; const orgH = frame.canvas.height;
-        const w = Math.max(1, Math.round(orgW * exportConfig.scale));
-        const h = Math.max(1, Math.round(orgH * exportConfig.scale));
+        let w = Math.max(1, Math.round(orgW * exportConfig.scale));
+        let h = Math.max(1, Math.round(orgH * exportConfig.scale));
+
+        // 確保 WebM 影片的寬高為偶數 (WebCodecs VP8/VP9 的限制)
+        if (exportConfig.format === 'webm') {
+            if (w % 2 !== 0) w++;
+            if (h % 2 !== 0) h++;
+        }
 
         const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
         const ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
@@ -1456,21 +1471,60 @@
             let exportW = 0, exportH = 0;
 
             let gif;
+            let webmMuxer = null;
+            let webmEncoder = null;
+            let currentTimeWebM = 0;
+
             if (exportConfig.format === 'gif') gif = gifencModule.GIFEncoder();
             
             const zipData = {};
             const isJpeg = exportConfig.format === 'zip-jpg';
             const isWebp = exportConfig.format === 'zip-webp';
-            const needsFillBg = exportConfig.format === 'gif' || isJpeg;
+            const needsFillBg = exportConfig.format === 'gif' || isJpeg || exportConfig.format === 'webm'; // WebM 也使用背景填色
 
             for (let i = 0; i < exportPoints.length; i++) {
                 const pt = exportPoints[i];
                 const { ctx, w, h, canvas } = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, needsFillBg ? exportConfig.bgColor : null);
-                if (i === 0) { exportW = w; exportH = h; }
+                if (i === 0) { 
+                    exportW = w; 
+                    exportH = h; 
+                    
+                    // 初始化 WebM Encoder (只在第一影格時初始化，因為需要得知長寬)
+                    if (exportConfig.format === 'webm') {
+                        if (!Muxer || typeof VideoEncoder === 'undefined') {
+                            throw new Error("您的瀏覽器不支援 WebM 影像編碼 (WebCodecs API)");
+                        }
+                        webmMuxer = new Muxer({
+                            target: new ArrayBufferTarget(),
+                            video: { codec: 'V_VP8', width: exportW, height: exportH }
+                        });
+                        webmEncoder = new VideoEncoder({
+                            output: (chunk, meta) => webmMuxer.addVideoChunk(chunk, meta),
+                            error: (e) => { console.error("WebM Encoder 錯誤:", e); throw e; }
+                        });
+                        webmEncoder.configure({
+                            codec: 'vp8', // VP8 具備高相容性，且能靈活適應各種奇葩解析度
+                            width: exportW,
+                            height: exportH,
+                            bitrate: 5_000_000 // 5 Mbps 提供非常高畫質的輸出
+                        });
+                    }
+                }
 
                 if (exportConfig.format === 'apng') {
                     imgs.push(ctx.getImageData(0, 0, exportW, exportH).data.buffer);
                     delays.push(pt.delay);
+                } else if (exportConfig.format === 'webm') {
+                    // 傳遞影格至 WebM VideoEncoder
+                    const frame = new VideoFrame(canvas, { timestamp: currentTimeWebM * 1000 }); // 微秒
+                    currentTimeWebM += pt.delay;
+                    webmEncoder.encode(frame, { keyFrame: i % 30 === 0 });
+                    frame.close();
+                    
+                    // 若佇列太長則稍微等待，避免記憶體爆炸
+                    while (webmEncoder.encodeQueueSize > 5) {
+                        await new Promise(r => setTimeout(r, 10));
+                    }
                 } else if (exportConfig.format === 'gif') {
                     const imgData = ctx.getImageData(0, 0, exportW, exportH);
                     const cnum = exportConfig.compression === 0 ? 256 : exportConfig.compression;
@@ -1529,6 +1583,11 @@
                 }
                 blob = new Blob([apngBuffer], { type: 'image/apng' });
                 filenameExt = 'apng.png';
+            } else if (exportConfig.format === 'webm') {
+                await webmEncoder.flush();
+                webmMuxer.finalize();
+                blob = new Blob([webmMuxer.target.buffer], { type: 'video/webm' });
+                filenameExt = 'webm';
             } else if (exportConfig.format === 'gif') {
                 gif.finish();
                 blob = new Blob([gif.bytesView()], { type: 'image/gif' });
@@ -1604,6 +1663,7 @@
                   <div>
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('format')}</label>
                     <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                      <option value="webm">{t('fmtWebm')}</option>
                       <option value="apng">{t('fmtApng')}</option>
                       <option value="gif">{t('fmtGif')}</option>
                       <option value="json">{t('fmtJson')}</option>
@@ -1628,8 +1688,8 @@
                     </div>
                   )}
 
-                  {/* BG Color (Visible for GIF / JPEG) */}
-                  {['gif', 'zip-jpg'].includes(exportConfig.format) && (
+                  {/* BG Color (Visible for GIF / JPEG / WebM) */}
+                  {['gif', 'zip-jpg', 'webm'].includes(exportConfig.format) && (
                     <div>
                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('bgColor')}</label>
                       <div className="flex items-center gap-3">
