@@ -36,14 +36,14 @@
     const i18n = {
       'zh-TW': {
         title: '動態影像編輯器', author: '作者:闕雪，X:@vm060460', shortcuts: '鍵盤快捷鍵', playPause: '播放/暫停', prevNext: '切換影格', 
-        delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫 / 影片', dragDrop: '拖曳檔案至此 (支援影片轉檔)',
+        delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫 / 影片 / 專案', dragDrop: '拖曳檔案至此 (支援影片與 JSON 專案檔)',
         gridView: '網格檢視', canvasView: '返回畫布', replace: '換圖', cropExpand: '裁切/擴展', clear: '清除',
         selected: '已選取', frames: '個影格', selectAll: '全選', deselect: '取消選取', copySelected: '複製所選', delSelected: '刪除所選',
         reverseAll: '全部倒放', selectedDelay: '所選停留', set: '設定', totalLen: '總長度 (等比例)', current: '目前',
         alignMode: '對齊方式', applyCrop: '確認裁切/擴展', cancel: '取消', convertAnim: '轉換動圖', global: '全域', editFx: '編輯特效',
         animLength: '設定動圖長度', autoFx: '自動生成特效', sec: '秒', startConvert: '開始轉換', timeCtrl: '影格時間控制',
         flip: '翻轉 (Flip)', flipH: '水平翻轉', flipV: '垂直翻轉', bgRemover: '去背功能', tolerance: '容差',
-        globalFilters: '全域濾鏡', opacity: '透明度', hue: '色相', sat: '飽提度', contrast: '對比度', invert: '負片',
+        globalFilters: '全域濾鏡', opacity: '透明度', hue: '色相', sat: '飽和度', contrast: '對比度', invert: '負片',
         scale: '縮放', rotate: '旋轉', translate: '位移', color: '色彩', livePreview: '拉動數值即時套用變化',
         easing: '漸變曲線 (Easing)', linear: '線性 (Linear)', easeIn: '漸快 (Ease In)', easeOut: '漸慢 (Ease Out)', easeInOut: '平滑 (Ease In Out)',
         currFrame: '第 {n} 格', rmNode: '移除節點', addNode: '插入節點', nextEasing: '前往下個節點的曲線速度',
@@ -51,19 +51,19 @@
         exportSettingsBtn: '匯出 / 下載', exportSettingsTitle: '匯出設定', format: '匯出格式',
         colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF / JPEG 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
         origFrames: '維持原始影格數', customFrames: '自訂輸出影格數', framesUnit: '格 (自動平滑重採樣)',
-        exporting: '處理與編碼中 (若為影片可能需要較長時間)...', confirmExport: '確認匯出', exportFailed: '匯出或載入失敗，請重試。',
+        exporting: '處理與編碼中 (若為影片可能需要較長時間)...', confirmExport: '確認匯出', exportFailed: '匯出或載入失敗，請檢查檔案。',
         fmtApng: 'APNG (高畫質動態PNG)', fmtGif: 'GIF (相容性最佳動圖)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
-        fmtJson: 'JSON (動畫數據與 Base64)',
+        fmtJson: 'JSON 專案檔 (動畫數據與 Base64)',
         compLossless: '0 (無失真 / 最高畫質)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
         size100: '100% (原始尺寸)', size75: '75% (有效縮小檔案)', size50: '50% (大幅縮小檔案)', size25: '25% (極小預覽)',
         none: '無 (不處理)', green: '去除綠幕', black: '去除純黑', white: '去除純白', customColor: '自訂顏色',
         noKfs: '~ 目前沒有特效關鍵影格，可由右側【編輯特效】面板增加漸變 ~', trackFrame: '影格',
         addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格', loop: '循環', speed: '倍速', globalCtrl: '總體控制',
-        timelineTools: '時間軸工具', trimStart: '裁切起點 (刪除前方)', trimEnd: '裁切終點 (刪除後方)'
+        timelineTools: '時間軸工具', trimStart: '裁切起點 (刪除前方)', trimEnd: '裁切終點 (刪除後方)', cantDelAll: '不能刪除所有影格'
       },
       'en': {
         title: 'Motion Image Editor', author: 'Author: QueXue, X:@vm060460', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
-        delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Anim/Video', dragDrop: 'Drag & Drop or Click (Video supported)',
+        delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Video/Project', dragDrop: 'Drag & Drop or Click (Video & JSON supported)',
         gridView: 'Grid View', canvasView: 'Canvas', replace: 'Replace', cropExpand: 'Crop/Expand', clear: 'Clear',
         selected: 'Selected', frames: 'frames', selectAll: 'Select All', deselect: 'Deselect', copySelected: 'Duplicate', delSelected: 'Delete',
         reverseAll: 'Reverse All', selectedDelay: 'Selected Delay', set: 'Set', totalLen: 'Total Length (Prop.)', current: 'Current',
@@ -78,19 +78,19 @@
         exportSettingsBtn: 'Export / Download', exportSettingsTitle: 'Export Settings', format: 'Format',
         colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG)', outScale: 'Output Scale', outFrames: 'Output Frames',
         origFrames: 'Keep Original Frame Count', customFrames: 'Custom Frame Count', framesUnit: 'frames (Auto-resample)',
-        exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Action failed.',
+        exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Action failed. Please check the file.',
         fmtApng: 'APNG (High Quality)', fmtGif: 'GIF (Best Compatibility)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
-        fmtJson: 'JSON (Data & Base64 Image)',
+        fmtJson: 'JSON Project (Data & Base64 Image)',
         compLossless: 'Lossless (Best Quality)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
         size100: '100% Size', size75: '75% Size', size50: '50% Size', size25: '25% Size',
         none: 'None', green: 'Remove Green', black: 'Remove Black', white: 'Remove White', customColor: 'Custom Color',
         noKfs: '~ No keyframes yet. Add them in the [Edit FX] panel. ~', trackFrame: 'Frames',
         addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames', loop: 'Loop', speed: 'Speed', globalCtrl: 'Global Control',
-        timelineTools: 'Timeline Tools', trimStart: 'Set Trim Start', trimEnd: 'Set Trim End'
+        timelineTools: 'Timeline Tools', trimStart: 'Set Trim Start', trimEnd: 'Set Trim End', cantDelAll: 'Cannot delete all frames'
       },
       'ja': {
         title: '動的画像エディタ', author: '作成者: 闕雪, X:@vm060460', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
-        delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/アニメ/動画読込', dragDrop: 'ドラッグ＆ドロップ (動画対応)',
+        delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/動画/PJ読込', dragDrop: 'ドラッグ＆ドロップ (動画・JSON対応)',
         gridView: 'グリッド表示', canvasView: 'キャンバス表示', replace: '置換', cropExpand: 'トリミング/拡張', clear: 'クリア',
         selected: '選択中', frames: 'フレーム', selectAll: 'すべて選択', deselect: '選択解除', copySelected: '複製', delSelected: '削除',
         reverseAll: '逆再生', selectedDelay: '選択の遅延', set: '適用', totalLen: '合計時間 (比例)', current: '現在',
@@ -107,17 +107,17 @@
         origFrames: '元のフレーム数を維持', customFrames: 'カスタムフレーム数', framesUnit: 'フレーム (自動補間)',
         exporting: 'エンコード中...', confirmExport: 'エクスポート実行', exportFailed: '失敗しました。',
         fmtApng: 'APNG (高品質)', fmtGif: 'GIF (高互換性)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
-        fmtJson: 'JSON (データと Base64)',
+        fmtJson: 'JSON プロジェクト (データと Base64)',
         compLossless: 'ロスレス (最高画質)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: 'なし', green: '緑を透過', black: '黒を透過', white: '白を透過', customColor: 'カスタム色',
         noKfs: '〜 キーフレームがありません。[エフェクト編集]パネルで追加してください 〜', trackFrame: 'フレーム',
         addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入', loop: 'ループ', speed: '倍速', globalCtrl: '全体制御',
-        timelineTools: 'タイムラインツール', trimStart: 'ここを開始位置にする', trimEnd: 'ここを終了位置にする'
+        timelineTools: 'タイムラインツール', trimStart: 'ここを開始位置にする', trimEnd: 'ここを終了位置にする', cantDelAll: '全フレームの削除はできません'
       },
       'ko': {
         title: '동적 이미지 편집기', author: '작성자: 闕雪, X:@vm060460', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
-        delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/애니/동영상 가져오기', dragDrop: '드래그 앤 드롭 (동영상 지원)',
+        delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/동영상/프로젝트 가져오기', dragDrop: '드래그 앤 드롭 (동영상 및 JSON 지원)',
         gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
         selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
@@ -132,15 +132,15 @@
         exportSettingsBtn: '내보내기 / 다운로드', exportSettingsTitle: '내보내기 설정', format: '형식',
         colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
         origFrames: '원본 프레임 유지', customFrames: '사용자 지정 프레임', framesUnit: '프레임 (자동 리샘플링)',
-        exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '실패.',
+        exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '실패했습니다.',
         fmtApng: 'APNG', fmtGif: 'GIF', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
-        fmtJson: 'JSON (데이터 및 Base64)',
+        fmtJson: 'JSON 프로젝트 (데이터 및 Base64)',
         compLossless: '무손실', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
         size100: '100%', size75: '75%', size50: '50%', size25: '25%',
         none: '없음', green: '녹색 제거', black: '검은색 제거', white: '흰색 제거', customColor: '사용자 지정 색상',
         noKfs: '~ 키프레임이 없습니다. [효과 편집] 패널에서 추가하세요 ~', trackFrame: '프레임',
         addTimeLen: '연장 시간 삽입', addStart: '시작에 추가', addEnd: '끝에 추가', insertFrames: '프레임 삽입', loop: '반복', speed: '배속', globalCtrl: '전체 제어',
-        timelineTools: '타임라인 도구', trimStart: '자르기 시작 위치', trimEnd: '자르기 종료 위치'
+        timelineTools: '타임라인 도구', trimStart: '자르기 시작 위치', trimEnd: '자르기 종료 위치', cantDelAll: '모든 프레임을 삭제할 수 없습니다'
       }
     };
 
@@ -236,10 +236,10 @@
       const [isExportModalOpen, setIsExportModalOpen] = useState(false);
       const [exportConfig, setExportConfig] = useState({
         format: 'apng', // apng, gif, zip-png, zip-jpg, zip-webp, json
-        compression: 0, // 0, 256, 128, 64, 32, 16
-        scale: 1.0,     // 1.0, 0.75, 0.5, 0.25
+        compression: 0, 
+        scale: 1.0,     
         bgColor: '#ffffff',
-        frameMode: 'original', // 'original' or 'custom'
+        frameMode: 'original', 
         customFrameCount: 30
       });
 
@@ -251,9 +251,7 @@
       const isRestoring = useRef(false);
       const chromaCache = useRef({ bgStateStr: '', canvases: [] }); 
 
-      // 新增：用於即時渲染正在拖曳的關鍵影格狀態
-      const [draggingKeyframe, setDraggingKeyframe] = useState(null); // { trackId, fromIdx, currentIdx }
-
+      const [draggingKeyframe, setDraggingKeyframe] = useState(null); 
       const [isLoading, setIsLoading] = useState(false);
       const [isExporting, setIsExporting] = useState(false);
       const [error, setError] = useState(null);
@@ -294,10 +292,11 @@
       useEffect(() => { currentFrameIndexRef.current = currentFrameIndex; }, [currentFrameIndex]);
       useEffect(() => { selectedKeyframeRef.current = selectedKeyframe; }, [selectedKeyframe]);
 
-      const pushInitialState = (newFrames) => {
+      // 支援額外傳入載入好的全域屬性 (用於 JSON 專案檔讀取)
+      const pushInitialState = (newFrames, initGlobals = null) => {
         const initialState = {
           frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
-          globals: { globalOpacity: 1.0, globalHue: 0, globalSaturation: 100, globalBrightness: 100, globalContrast: 100, globalInvert: 0, globalFlipX: false, globalFlipY: false, speed: 1.0, bgRemoval: { type: 'none', color: '#00ff00', tolerance: 50 } }
+          globals: initGlobals ? { ...initGlobals } : { globalOpacity: 1.0, globalHue: 0, globalSaturation: 100, globalBrightness: 100, globalContrast: 100, globalInvert: 0, globalFlipX: false, globalFlipY: false, speed: 1.0, bgRemoval: { type: 'none', color: '#00ff00', tolerance: 50 } }
         };
         setHistory([initialState]);
         setHistoryPointer(0);
@@ -484,7 +483,6 @@
 
             video.onloadeddata = () => {
                 const duration = video.duration;
-                // 限制最高解析度避免記憶體崩潰
                 let width = video.videoWidth;
                 let height = video.videoHeight;
                 const MAX_DIM = 1080; 
@@ -510,7 +508,7 @@
                     framesArr.push(buildFrameObj(frameCanvas, Math.round(1000 / targetFPS)));
 
                     currentTime += timeStep;
-                    // 限制最高 300 幀 (約 25 秒) 避免記憶體崩潰
+                    // 限制最高 300 幀避免記憶體崩潰
                     if (currentTime <= duration && framesArr.length < 300) {
                         video.currentTime = currentTime;
                     } else {
@@ -593,9 +591,44 @@
           const nameWithoutExt = nameExtIdx !== -1 ? file.name.substring(0, nameExtIdx) : file.name;
           setOriginalFileName(nameWithoutExt);
 
-          const parsedFrames = await parseFileToFrames(file);
+          let parsedFrames = [];
+          let loadedGlobals = null;
+          let isJsonImport = false;
 
-          if (isReplace && frames.length > 0) {
+          // 判斷是否為 JSON 專案檔匯入
+          if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
+             isJsonImport = true;
+             const text = await file.text();
+             const data = JSON.parse(text);
+             if (!data.metadata || data.metadata.format !== "Motion Image Editor Export") {
+                 throw new Error("Invalid JSON");
+             }
+             
+             parsedFrames = await Promise.all(data.frames.map(async (f) => {
+                 const img = new Image();
+                 await new Promise((resolve, reject) => { 
+                     img.onload = resolve; 
+                     img.onerror = reject; 
+                     img.src = f.image; 
+                 });
+                 const c = document.createElement('canvas');
+                 c.width = img.width; c.height = img.height;
+                 c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
+                 
+                 return {
+                     canvas: c, 
+                     delay: f.delay || 100,
+                     customFilters: f.filters || { ...DEFAULT_FILTERS },
+                     keyframes: f.keyframes || { opacity: false, scale: false, rotate: false, translate: false, color: false },
+                     easings: f.easings || { opacity: 'linear', scale: 'linear', rotate: 'linear', translate: 'linear', color: 'linear' }
+                 };
+             }));
+             loadedGlobals = data.globals;
+          } else {
+             parsedFrames = await parseFileToFrames(file);
+          }
+
+          if (isReplace && frames.length > 0 && !isJsonImport) {
               if (frames.length === 1 && parsedFrames.length > 1) {
                   setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
                   setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
@@ -625,14 +658,44 @@
                   setHistoryPointer(newHistory.length - 1);
               }
           } else {
-              setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
-              setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
-              setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
+              // 完整載入 (新檔 或 JSON 專案還原)
+              if (loadedGlobals) {
+                 setGlobalOpacity(loadedGlobals.opacity ?? 1.0);
+                 setGlobalHue(loadedGlobals.hue ?? 0);
+                 setGlobalSaturation(loadedGlobals.saturation ?? 100);
+                 setGlobalBrightness(loadedGlobals.brightness ?? 100);
+                 setGlobalContrast(loadedGlobals.contrast ?? 100);
+                 setGlobalInvert(loadedGlobals.invert ?? 0);
+                 setGlobalFlipX(loadedGlobals.flipX ?? false);
+                 setGlobalFlipY(loadedGlobals.flipY ?? false);
+                 setSpeed(loadedGlobals.speed ?? 1.0);
+                 setBgRemoval(loadedGlobals.bgRemoval ?? { type: 'none', color: '#00ff00', tolerance: 50 });
+              } else {
+                 setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
+                 setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
+                 setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
+              }
+              
               chromaCache.current = { bgStateStr: '', canvases: [] }; 
 
               setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
               setSelectedFrames([]); 
-              pushInitialState(parsedFrames);
+              
+              // 對齊 globals 結構存入 history
+              const mappedGlobals = loadedGlobals ? {
+                 globalOpacity: loadedGlobals.opacity ?? 1.0,
+                 globalHue: loadedGlobals.hue ?? 0,
+                 globalSaturation: loadedGlobals.saturation ?? 100,
+                 globalBrightness: loadedGlobals.brightness ?? 100,
+                 globalContrast: loadedGlobals.contrast ?? 100,
+                 globalInvert: loadedGlobals.invert ?? 0,
+                 globalFlipX: loadedGlobals.flipX ?? false,
+                 globalFlipY: loadedGlobals.flipY ?? false,
+                 speed: loadedGlobals.speed ?? 1.0,
+                 bgRemoval: loadedGlobals.bgRemoval ?? { type: 'none', color: '#00ff00', tolerance: 50 }
+              } : null;
+              
+              pushInitialState(parsedFrames, mappedGlobals);
               
               if (parsedFrames.length === 1) setActiveTab('convert');
               else { setActiveTab('global'); setIsPlaying(false); }
@@ -673,11 +736,10 @@
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
-      // 手動插入影格並延長時間
       const handleAddFramesByTime = () => {
         if (frames.length === 0 || addSecondsInput <= 0) return;
         const totalMs = addSecondsInput * 1000;
-        const frameCountToAdd = Math.max(1, Math.round(addSecondsInput * 10)); // 10 FPS
+        const frameCountToAdd = Math.max(1, Math.round(addSecondsInput * 10)); 
         const delayPerFrame = Math.round(totalMs / frameCountToAdd);
 
         isRestoring.current = true;
@@ -1007,7 +1069,6 @@
         window.addEventListener('mousemove', onMouseMove); window.addEventListener('mouseup', onMouseUp);
       };
 
-      // 修正：支援即時視覺更新的平滑關鍵影格拖曳
       const handleKeyframeDrag = (e, fromIdx, trackId) => {
         e.preventDefault(); e.stopPropagation();
         const container = timelineTrackRef.current;
@@ -1052,7 +1113,6 @@
         window.addEventListener('mouseup', onMouseUp);
       };
 
-      // 新增：時間軸直接裁切長度工具
       const handleTrimStart = () => {
           if (currentFrameIndex <= 0 || frames.length <= 1) return;
           isRestoring.current = true;
@@ -1234,7 +1294,6 @@
         setTimeout(() => { isRestoring.current = false; }, 50);
       };
 
-      // == 繪製貝茲曲線 (Draw Visual Easing Curves) ==
       const renderTimelineCurves = (trackId, strokeColor) => {
         const keyframesData = frames.map((f, i) => ({ frame: f, idx: i })).filter(k => k.frame.keyframes[trackId]);
         if (keyframesData.length < 2) return null;
@@ -1247,7 +1306,7 @@
             const x2 = (k2.idx / maxIdx) * 100;
             const easing = k1.frame.easings[trackId];
             
-            let d = "M 0 50 L 100 50"; // default linear (flat)
+            let d = "M 0 50 L 100 50"; 
             if(easing === 'linear') d = "M 0 80 L 100 20";
             else if(easing === 'easeIn') d = "M 0 80 Q 80 80, 100 20";
             else if(easing === 'easeOut') d = "M 0 80 Q 20 20, 100 20";
@@ -1268,14 +1327,13 @@
         if (frames.length === 0) return 0;
         const baseW = frames[0].canvas.width * exportConfig.scale;
         const baseH = frames[0].canvas.height * exportConfig.scale;
-        // Count depends on frame mode
         let fCount = frames.length;
         if (exportConfig.frameMode === 'custom') {
             fCount = Math.max(2, exportConfig.customFrameCount);
         }
         const rawBytes = baseW * baseH * 4 * fCount;
         let multiplier = 0.25; 
-        if (exportConfig.format === 'json') return rawBytes * 0.15; // roughly base64 estimate
+        if (exportConfig.format === 'json') return rawBytes * 0.15; 
         if (exportConfig.format.includes('webp') || exportConfig.format.includes('jpg')) multiplier = 0.05;
         else if (exportConfig.compression === 256) multiplier = 0.05;
         else if (exportConfig.compression === 128) multiplier = 0.035;
@@ -1318,11 +1376,46 @@
         return { canvas: tempCanvas, ctx, w, h }; 
       };
 
-      // 整合與重構的匯出引擎
       const handleConfirmExport = async () => {
         setIsExporting(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // --- JSON Export ---
+            if (exportConfig.format === 'json') {
+                const outJsonData = {
+                    metadata: {
+                        version: "2.0",
+                        format: "Motion Image Editor Export",
+                        frameCount: frames.length,
+                        totalDuration: frames.reduce((sum, f) => sum + f.delay, 0)
+                    },
+                    globals: {
+                        opacity: globalOpacity, hue: globalHue, saturation: globalSaturation, 
+                        brightness: globalBrightness, contrast: globalContrast, invert: globalInvert,
+                        flipX: globalFlipX, flipY: globalFlipY, speed: speed, bgRemoval
+                    },
+                    frames: frames.map((f, i) => ({
+                        index: i,
+                        delay: f.delay,
+                        filters: f.customFilters,
+                        keyframes: f.keyframes,
+                        easings: f.easings,
+                        image: f.canvas.toDataURL('image/png')
+                    }))
+                };
+                const blob = new Blob([JSON.stringify(outJsonData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${originalFileName}_project.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setIsExportModalOpen(false);
+                setIsExporting(false);
+                return;
+            }
+
             const exportPoints = [];
             let totalDuration = frames.reduce((sum, f) => sum + f.delay, 0);
             if (totalDuration === 0) totalDuration = 1000;
@@ -1369,21 +1462,6 @@
             const isJpeg = exportConfig.format === 'zip-jpg';
             const isWebp = exportConfig.format === 'zip-webp';
             const needsFillBg = exportConfig.format === 'gif' || isJpeg;
-            const isJSON = exportConfig.format === 'json';
-            const outJsonData = isJSON ? {
-                metadata: {
-                    version: "2.0",
-                    format: "Motion Image Editor Export",
-                    frameCount: exportPoints.length,
-                    totalDuration: exportPoints.reduce((sum, pt) => sum + pt.delay, 0)
-                },
-                globals: {
-                    opacity: globalOpacity, hue: globalHue, saturation: globalSaturation, 
-                    brightness: globalBrightness, contrast: globalContrast, invert: globalInvert,
-                    flipX: globalFlipX, flipY: globalFlipY, speed: speed, bgRemoval
-                },
-                frames: []
-            } : null;
 
             for (let i = 0; i < exportPoints.length; i++) {
                 const pt = exportPoints[i];
@@ -1399,16 +1477,6 @@
                     const palette = gifencModule.quantize(imgData.data, cnum);
                     const index = gifencModule.applyPalette(imgData.data, palette);
                     gif.writeFrame(index, exportW, exportH, { palette, delay: pt.delay });
-                } else if (isJSON) {
-                    outJsonData.frames.push({
-                        index: i,
-                        delay: pt.delay,
-                        sourceIndex: pt.baseIndex,
-                        filters: frames[pt.baseIndex].customFilters,
-                        keyframes: frames[pt.baseIndex].keyframes,
-                        easings: frames[pt.baseIndex].easings,
-                        image: canvas.toDataURL('image/png')
-                    });
                 } else {
                     const mimeType = isJpeg ? 'image/jpeg' : (isWebp ? 'image/webp' : 'image/png');
                     const ext = isJpeg ? 'jpg' : (isWebp ? 'webp' : 'png');
@@ -1465,9 +1533,6 @@
                 gif.finish();
                 blob = new Blob([gif.bytesView()], { type: 'image/gif' });
                 filenameExt = 'gif';
-            } else if (exportConfig.format === 'json') {
-                blob = new Blob([JSON.stringify(outJsonData, null, 2)], { type: 'application/json' });
-                filenameExt = 'json';
             } else {
                 const zipped = fflate.zipSync(zipData);
                 blob = new Blob([zipped], { type: 'application/zip' });
@@ -1489,6 +1554,8 @@
             setIsExporting(false); 
         }
       };
+
+      const isJsonSelected = exportConfig.format === 'json';
 
       return (
         <div 
@@ -1573,18 +1640,20 @@
                   )}
 
                   {/* Scale */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('outScale')}</label>
-                    <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
-                      <option value={1.0}>{t('size100')}</option>
-                      <option value={0.75}>{t('size75')}</option>
-                      <option value={0.5}>{t('size50')}</option>
-                      <option value={0.25}>{t('size25')}</option>
-                    </select>
-                  </div>
+                  {!isJsonSelected && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('outScale')}</label>
+                      <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
+                        <option value={1.0}>{t('size100')}</option>
+                        <option value={0.75}>{t('size75')}</option>
+                        <option value={0.5}>{t('size50')}</option>
+                        <option value={0.25}>{t('size25')}</option>
+                      </select>
+                    </div>
+                  )}
 
                   {/* Frame Count */}
-                  {frames.length > 1 && (
+                  {frames.length > 1 && !isJsonSelected && (
                     <div>
                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block">{t('outFrames')}</label>
                       <div className="flex flex-col gap-3">
@@ -1849,7 +1918,7 @@
               {frames.length > 1 && !isCropMode && !isGridView && (
                 <div className="h-[250px] bg-[#f8f9fa] dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 flex flex-col shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] z-20 select-none relative overflow-hidden">
                   
-                  {/* 新增: 時間軸工具列 (裁切) */}
+                  {/* 時間軸工具列 (裁切) */}
                   <div className="h-8 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 shrink-0">
                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1"><Scissors className="w-3 h-3"/> {t('timelineTools')}</span>
                      <div className="flex gap-2">
@@ -2239,7 +2308,7 @@
 
                 </div>
 
-                {/* 新匯出面板 (打開 Modal) */}
+                {/* 匯出面板 (打開 Modal) */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
                   <button onClick={() => {
                       setExportConfig(prev => ({...prev, customFrameCount: frames.length}));
@@ -2247,8 +2316,8 @@
                   }} disabled={isExporting || frames.length === 0} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
                       <Download className="w-5 h-5" /> {t('exportSettingsBtn')}
                   </button>
-                  <input id="file-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
-                  <input id="replace-upload" type="file" accept="image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onReplaceFileChange} />
+                  <input id="file-upload" type="file" accept=".json, application/json, image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
+                  <input id="replace-upload" type="file" accept=".json, application/json, image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onReplaceFileChange} />
                 </div>
               </div>
             )}
@@ -2296,7 +2365,6 @@
         setIsEditing(false);
         let val = parseFloat(localVal);
         if (isNaN(val)) val = value;
-        // 允許超出滑桿的 max 預設值，只確保不低於最小值
         val = Math.max(min, val);
         onChange(val);
         setLocalVal(isFloat ? Number(val).toFixed(1) : Math.round(val));
