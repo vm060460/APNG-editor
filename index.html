@@ -249,7 +249,28 @@
       const [history, setHistory] = useState([]);
       const [historyPointer, setHistoryPointer] = useState(-1);
       const isRestoring = useRef(false);
-      const chromaCache = useRef({ bgStateStr: '', canvases: [] }); 
+      
+      // ✅ 優化：建立完美的背景去背與快取機制，讓預覽更順暢
+      const chromaCache = useRef({ bgStateStr: '', canvases: [], originals: [] }); 
+
+      const getProcessedCanvas = useCallback((idx) => {
+          const f = frames[idx];
+          if (!f) return null;
+          if (bgRemoval.type === 'none') return f.canvas;
+          
+          const cache = chromaCache.current;
+          const bgStr = JSON.stringify(bgRemoval);
+          if (cache.bgStateStr !== bgStr) {
+              cache.bgStateStr = bgStr;
+              cache.canvases = [];
+              cache.originals = [];
+          }
+          if (cache.originals[idx] !== f.canvas || !cache.canvases[idx]) {
+              cache.originals[idx] = f.canvas;
+              cache.canvases[idx] = applyChromaKey(f.canvas, bgRemoval);
+          }
+          return cache.canvases[idx];
+      }, [frames, bgRemoval]);
 
       const [draggingKeyframe, setDraggingKeyframe] = useState(null); 
       const [isLoading, setIsLoading] = useState(false);
@@ -484,13 +505,11 @@
             video.playsInline = true;
             video.src = URL.createObjectURL(file);
             const framesArr = [];
-            // 使用 30FPS 保留影片順暢度與高畫質
             const targetFPS = 30; 
             const timeStep = 1 / targetFPS;
 
             video.onloadeddata = () => {
                 const duration = video.duration;
-                // 不限制 MAX_DIM，完整保留原始畫質與尺寸
                 let width = video.videoWidth;
                 let height = video.videoHeight;
 
@@ -510,7 +529,6 @@
                     framesArr.push(buildFrameObj(frameCanvas, Math.round(1000 / targetFPS)));
 
                     currentTime += timeStep;
-                    // 為了避免記憶體溢出，將幀數限制調高至 900 幀 (約 30 秒)
                     if (currentTime <= duration && framesArr.length < 900) {
                         video.currentTime = currentTime;
                     } else {
@@ -597,7 +615,6 @@
           let loadedGlobals = null;
           let isJsonImport = false;
 
-          // 判斷是否為 JSON 專案檔匯入
           if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
              isJsonImport = true;
              const text = await file.text();
@@ -635,7 +652,7 @@
                   setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
                   setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
                   setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
-                  chromaCache.current = { bgStateStr: '', canvases: [] }; 
+                  chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
 
                   setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
                   pushInitialState(parsedFrames);
@@ -647,7 +664,7 @@
                   });
 
                   setFrames(replacedFrames);
-                  chromaCache.current = { bgStateStr: '', canvases: [] }; 
+                  chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
                   
                   const currentState = {
                     frames: replacedFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings }, delay: f.delay })),
@@ -660,7 +677,6 @@
                   setHistoryPointer(newHistory.length - 1);
               }
           } else {
-              // 完整載入 (新檔 或 JSON 專案還原)
               if (loadedGlobals) {
                  setGlobalOpacity(loadedGlobals.opacity ?? 1.0);
                  setGlobalHue(loadedGlobals.hue ?? 0);
@@ -678,12 +694,11 @@
                  setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
               }
               
-              chromaCache.current = { bgStateStr: '', canvases: [] }; 
+              chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
 
               setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
               setSelectedFrames([]); 
               
-              // 對齊 globals 結構存入 history
               const mappedGlobals = loadedGlobals ? {
                  globalOpacity: loadedGlobals.opacity ?? 1.0,
                  globalHue: loadedGlobals.hue ?? 0,
@@ -724,12 +739,20 @@
         for (let i = 0; i < frameCount; i++) {
           const c = document.createElement('canvas'); c.width = w; c.height = h;
           const ctx = c.getContext('2d'); const p = frameCount > 1 ? i / (frameCount - 1) : 0;
+          
+          let alpha = 1.0;
+          if (convertEffect === 'pulse') alpha = Math.max(0, Math.min(1, 0.5 + 0.5 * Math.cos(p * Math.PI * 2))); 
+          
           ctx.save();
           if (convertEffect === 'hue') ctx.filter = `hue-rotate(${p * 360}deg)`;
-          else if (convertEffect === 'pulse') ctx.globalAlpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.cos(p * Math.PI * 2)); 
           else if (convertEffect === 'spin') { ctx.translate(w/2, h/2); ctx.rotate(p * Math.PI * 2); ctx.translate(-w/2, -h/2); } 
           else if (convertEffect === 'zoom') { const s = 1.0 + 0.2 * Math.sin(p * Math.PI * 2); ctx.translate(w/2, h/2); ctx.scale(s, s); ctx.translate(-w/2, -h/2); }
-          ctx.drawImage(sourceCanvas, 0, 0); ctx.restore();
+          
+          if (alpha > 0.005) {
+              ctx.globalAlpha = alpha;
+              ctx.drawImage(sourceCanvas, 0, 0); 
+          }
+          ctx.restore();
           newFrames.push(buildFrameObj(c, delay));
         }
         
@@ -967,7 +990,7 @@
           ctx.drawImage(f.canvas, -Math.round(cropRect.x), -Math.round(cropRect.y));
           return { ...f, canvas: c };
         });
-        setFrames(newFrames); setIsCropMode(false); chromaCache.current = { bgStateStr: '', canvases: [] };
+        setFrames(newFrames); setIsCropMode(false); chromaCache.current = { bgStateStr: '', canvases: [], originals: [] };
         
         const currentState = {
           frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings }, delay: f.delay })),
@@ -1021,7 +1044,7 @@
       }, [getRawInterpolatedFilters, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert]);
 
       useEffect(() => {
-        if (frames.length > 0 && canvasRef.current && !isGridView) {
+        if (frames.length > 0 && canvasRef.current && !isGridView && !isCropMode) {
           const ctx = canvasRef.current.getContext('2d');
           const frame = frames[currentFrameIndex];
           const w = frame.canvas.width; const h = frame.canvas.height;
@@ -1029,27 +1052,23 @@
           if (canvasRef.current.width !== w) canvasRef.current.width = w;
           if (canvasRef.current.height !== h) canvasRef.current.height = h;
           
-          let processedChromaCanvas = frame.canvas;
-          if (bgRemoval.type !== 'none') {
-            const bgStateStr = JSON.stringify(bgRemoval);
-            if (chromaCache.current.bgStateStr !== bgStateStr || chromaCache.current.canvases.length !== frames.length) {
-              chromaCache.current.bgStateStr = bgStateStr;
-              chromaCache.current.canvases = frames.map(f => applyChromaKey(f.canvas, bgRemoval));
-            }
-            processedChromaCanvas = chromaCache.current.canvases[currentFrameIndex];
-          }
-          
+          const processedChromaCanvas = getProcessedCanvas(currentFrameIndex);
           const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, currentFrameIndex);
           
-          ctx.clearRect(0, 0, w, h); ctx.save();
-          ctx.globalAlpha = opacity; ctx.filter = filterString;
-          ctx.translate(w/2 + translateX, h/2 + translateY); 
-          ctx.rotate((rotate * Math.PI) / 180); 
-          ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
-          ctx.translate(-w/2, -h/2);
-          ctx.drawImage(processedChromaCanvas, 0, 0); ctx.restore();
+          ctx.clearRect(0, 0, w, h); 
+          
+          if (opacity > 0.005) {
+              ctx.save();
+              ctx.globalAlpha = opacity; ctx.filter = filterString;
+              ctx.translate(w/2 + translateX, h/2 + translateY); 
+              ctx.rotate((rotate * Math.PI) / 180); 
+              ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
+              ctx.translate(-w/2, -h/2);
+              ctx.drawImage(processedChromaCanvas, 0, 0); 
+              ctx.restore();
+          }
         }
-      }, [frames, currentFrameIndex, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, bgRemoval, getFinalRenderFilters, isGridView]);
+      }, [frames, currentFrameIndex, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, bgRemoval, getFinalRenderFilters, isGridView, isCropMode, getProcessedCanvas]);
 
       const handleTimelineMouseDown = (e) => {
         if (e.target.closest('.keyframe-diamond')) return; 
@@ -1340,28 +1359,25 @@
 
         const rawBytes = baseW * baseH * 4 * fCount;
         
-        // 特殊處理 WebM：因為指定固定 Bitrate (5Mbps)，大小直接由時長與目標流量決定
         if (exportConfig.format === 'webm') {
-             // 5Mbps = 625,000 Bytes/s，考量到動態與靜態平衡，以 400KB/s 作為平均預估，並且設定 1KB 的最低下限
              return Math.max(totalSeconds * 400_000, 1024); 
         }
 
         let multiplier = 0.25; 
         
-        // 更精準預估檔案大小，根據編碼器實際行為調整係數
         if (exportConfig.format === 'json') multiplier = 0.3; 
-        else if (exportConfig.format === 'zip-png') multiplier = 0.2; // 單純的 PNG Deflate
+        else if (exportConfig.format === 'zip-png') multiplier = 0.2; 
         else if (exportConfig.format === 'zip-jpg') multiplier = 0.06;
         else if (exportConfig.format === 'zip-webp') multiplier = 0.04;
         else if (exportConfig.format === 'apng') {
-            if (exportConfig.compression === 0) multiplier = 0.25; // 無失真但有 Deflate 壓縮
-            else if (exportConfig.compression === 256) multiplier = 0.05; // 8-bit (1 byte/pixel)
+            if (exportConfig.compression === 0) multiplier = 0.25; 
+            else if (exportConfig.compression === 256) multiplier = 0.05; 
             else if (exportConfig.compression === 128) multiplier = 0.04;
             else if (exportConfig.compression === 64) multiplier = 0.03;
             else multiplier = 0.015;
         }
         else if (exportConfig.format === 'gif') {
-            multiplier = 0.08; // GIF 的 LZW 演算法
+            multiplier = 0.08; 
         }
 
         return rawBytes * multiplier;
@@ -1378,7 +1394,6 @@
         let w = Math.max(1, Math.round(orgW * exportConfig.scale));
         let h = Math.max(1, Math.round(orgH * exportConfig.scale));
 
-        // 確保 WebM 影片的寬高為偶數 (WebCodecs VP8/VP9 的限制)
         if (exportConfig.format === 'webm') {
             if (w % 2 !== 0) w++;
             if (h % 2 !== 0) h++;
@@ -1390,19 +1405,25 @@
         if (fillBgColor) {
             ctx.fillStyle = fillBgColor;
             ctx.fillRect(0, 0, w, h);
+        } else {
+            ctx.clearRect(0, 0, w, h);
         }
 
-        const processedChromaCanvas = (bgRemoval.type !== 'none' && chromaCache.current.canvases[baseIndex]) ? chromaCache.current.canvases[baseIndex] : frame.canvas;
+        const processedChromaCanvas = getProcessedCanvas(baseIndex);
         const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, floatIndex);
         
-        ctx.globalAlpha = opacity; ctx.filter = filterString;
-        ctx.scale(exportConfig.scale, exportConfig.scale);
-        ctx.translate(orgW/2 + translateX, orgH/2 + translateY); 
-        ctx.rotate((rotate * Math.PI) / 180); 
-        ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
-        ctx.translate(-orgW/2, -orgH/2);
+        if (opacity > 0.005) {
+            ctx.save();
+            ctx.globalAlpha = opacity; ctx.filter = filterString;
+            ctx.scale(exportConfig.scale, exportConfig.scale);
+            ctx.translate(orgW/2 + translateX, orgH/2 + translateY); 
+            ctx.rotate((rotate * Math.PI) / 180); 
+            ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
+            ctx.translate(-orgW/2, -orgH/2);
+            ctx.drawImage(processedChromaCanvas, 0, 0);
+            ctx.restore();
+        }
         
-        ctx.drawImage(processedChromaCanvas, 0, 0);
         return { canvas: tempCanvas, ctx, w, h }; 
       };
 
@@ -1411,7 +1432,6 @@
         try {
             await new Promise(resolve => setTimeout(resolve, 50));
             
-            // --- JSON Export ---
             if (exportConfig.format === 'json') {
                 const outJsonData = {
                     metadata: {
@@ -1495,7 +1515,7 @@
             const zipData = {};
             const isJpeg = exportConfig.format === 'zip-jpg';
             const isWebp = exportConfig.format === 'zip-webp';
-            const needsFillBg = exportConfig.format === 'gif' || isJpeg || exportConfig.format === 'webm'; // WebM 也使用背景填色
+            const needsFillBg = exportConfig.format === 'gif' || isJpeg || exportConfig.format === 'webm';
 
             for (let i = 0; i < exportPoints.length; i++) {
                 const pt = exportPoints[i];
@@ -1504,7 +1524,6 @@
                     exportW = w; 
                     exportH = h; 
                     
-                    // 初始化 WebM Encoder (只在第一影格時初始化，因為需要得知長寬)
                     if (exportConfig.format === 'webm') {
                         if (!Muxer || typeof VideoEncoder === 'undefined') {
                             throw new Error("您的瀏覽器不支援 WebM 影像編碼 (WebCodecs API)");
@@ -1518,25 +1537,31 @@
                             error: (e) => { console.error("WebM Encoder 錯誤:", e); throw e; }
                         });
                         webmEncoder.configure({
-                            codec: 'vp8', // VP8 具備高相容性，且能靈活適應各種奇葩解析度
+                            codec: 'vp8',
                             width: exportW,
                             height: exportH,
-                            bitrate: 5_000_000 // 5 Mbps 提供非常高畫質的輸出
+                            bitrate: 5_000_000
                         });
                     }
                 }
 
                 if (exportConfig.format === 'apng') {
-                    imgs.push(ctx.getImageData(0, 0, exportW, exportH).data.buffer);
+                    const imgData = ctx.getImageData(0, 0, exportW, exportH);
+                    
+                    // ✅ 防禦層 1：切換極微量 Alpha，強迫 UPNG 生成全尺寸 Bounding Box，避免邊緣殘留
+                    const tl = 3; 
+                    const br = (exportW * exportH - 1) * 4 + 3; 
+                    imgData.data[tl] = (i % 2 === 0) ? Math.max(0, imgData.data[tl] - 1) : Math.min(255, imgData.data[tl] + 1);
+                    imgData.data[br] = (i % 2 === 0) ? Math.max(0, imgData.data[br] - 1) : Math.min(255, imgData.data[br] + 1);
+                    
+                    imgs.push(imgData.data.buffer);
                     delays.push(pt.delay);
                 } else if (exportConfig.format === 'webm') {
-                    // 傳遞影格至 WebM VideoEncoder
-                    const frame = new VideoFrame(canvas, { timestamp: currentTimeWebM * 1000 }); // 微秒
+                    const frame = new VideoFrame(canvas, { timestamp: currentTimeWebM * 1000 });
                     currentTimeWebM += pt.delay;
                     webmEncoder.encode(frame, { keyFrame: i % 30 === 0 });
                     frame.close();
                     
-                    // 若佇列太長則稍微等待，避免記憶體爆炸
                     while (webmEncoder.encodeQueueSize > 5) {
                         await new Promise(r => setTimeout(r, 10));
                     }
@@ -1564,37 +1589,49 @@
 
             let blob;
             let filenameExt;
+            
+            // CRC32 計算函數
+            const crcTable = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+               let c = i;
+               for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+               crcTable[i] = c;
+            }
+            const crc32 = (buf, off, len) => {
+               let crc = 0 ^ (-1);
+               for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
+               return (crc ^ (-1)) >>> 0;
+            };
+
             if (exportConfig.format === 'apng') {
                 let cnum = parseInt(exportConfig.compression) || 0;
                 let apngBuffer = UPNG.encode(imgs, exportW, exportH, cnum, delays);
                 
-                if (!isLooping) {
-                   const crcTable = new Uint32Array(256);
-                   for (let i = 0; i < 256; i++) {
-                      let c = i;
-                      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-                      crcTable[i] = c;
+                // ✅ 防禦層 2：攔截 APNG 二進位資料，強力覆寫 fcTL Chunk 的繪製邏輯
+                const view = new DataView(apngBuffer);
+                const uint8 = new Uint8Array(apngBuffer);
+                const length = view.byteLength;
+                let offset = 8;
+                while (offset < length) {
+                   const chunkLen = view.getUint32(offset);
+                   const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
+                   let modified = false;
+                   
+                   if (chunkType === 'acTL' && !isLooping) {
+                      view.setUint32(offset + 12, 1); 
+                      modified = true;
+                   } else if (chunkType === 'fcTL') {
+                      // 強制設定為：清除前影格背景(BACKGROUND) + 直接覆寫新像素(SOURCE)
+                      view.setUint8(offset + 32, 1); 
+                      view.setUint8(offset + 33, 0); 
+                      modified = true;
                    }
-                   const crc32 = (buf, off, len) => {
-                      let crc = 0 ^ (-1);
-                      for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
-                      return (crc ^ (-1)) >>> 0;
-                   };
-                   const view = new DataView(apngBuffer);
-                   const uint8 = new Uint8Array(apngBuffer);
-                   const length = view.byteLength;
-                   let offset = 8;
-                   while (offset < length) {
-                      const chunkLen = view.getUint32(offset);
-                      const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
-                      if (chunkType === 'acTL') {
-                         view.setUint32(offset + 12, 1); 
-                         const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
-                         view.setUint32(offset + 8 + chunkLen, newCrc);
-                         break;
-                      }
-                      offset += 8 + chunkLen + 4;
+                   
+                   if (modified) {
+                      const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
+                      view.setUint32(offset + 8 + chunkLen, newCrc);
                    }
+                   offset += 8 + chunkLen + 4;
                 }
                 blob = new Blob([apngBuffer], { type: 'image/apng' });
                 filenameExt = 'apng.png';
@@ -1832,7 +1869,7 @@
                     <button onClick={undo} disabled={historyPointer <= 0} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors disabled:opacity-30"><Undo2 className="w-4 h-4" /></button>
                     <button onClick={redo} disabled={historyPointer >= history.length - 1} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors disabled:opacity-30"><Redo2 className="w-4 h-4" /></button>
                   </div>
-                  <button onClick={() => { setFrames([]); setIsPlaying(false); setActiveTab('global'); setHistory([]); setHistoryPointer(-1); setIsGridView(false); chromaCache.current = {bgStateStr:'', canvases:[]}; }} className="text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20">{t('clear')}</button>
+                  <button onClick={() => { setFrames([]); setIsPlaying(false); setActiveTab('global'); setHistory([]); setHistoryPointer(-1); setIsGridView(false); chromaCache.current = {bgStateStr:'', canvases:[], originals:[]}; }} className="text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20">{t('clear')}</button>
                 </div>
               )}
             </div>
@@ -1908,7 +1945,13 @@
                            >
                               <span className="absolute top-1 left-1.5 text-[9px] font-mono font-bold text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1 rounded">{i}</span>
                               <div className="w-full h-full flex items-center justify-center p-1 mt-2 pointer-events-none">
-                                 <FrameThumbnail sourceCanvas={f.canvas} />
+                                 {/* ✅ 即時預覽渲染 */}
+                                 <FrameThumbnail 
+                                    sourceCanvas={getProcessedCanvas(i)}
+                                    filters={getFinalRenderFilters(frames, i)}
+                                    globalFlipX={globalFlipX}
+                                    globalFlipY={globalFlipY}
+                                 />
                               </div>
                               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1 pointer-events-none">{f.delay}ms</span>
                            </div>
@@ -2041,7 +2084,13 @@
                                       e.stopPropagation(); setCurrentFrameIndex(idx); setIsPlaying(false); setActiveTab('edit'); 
                                     }}
                                   >
-                                    <FrameThumbnail sourceCanvas={frame.canvas} />
+                                    {/* ✅ 即時預覽渲染 */}
+                                    <FrameThumbnail 
+                                       sourceCanvas={getProcessedCanvas(idx)}
+                                       filters={getFinalRenderFilters(frames, idx)}
+                                       globalFlipX={globalFlipX}
+                                       globalFlipY={globalFlipY}
+                                    />
                                   </div>
                                 );
                               })}
@@ -2457,7 +2506,8 @@
       );
     }
 
-    const FrameThumbnail = React.memo(({ sourceCanvas }) => {
+    // ✅ 全新強化的 FrameThumbnail：即時套用位移、旋轉、透明與濾鏡
+    const FrameThumbnail = React.memo(({ sourceCanvas, filters, globalFlipX, globalFlipY }) => {
       const ref = React.useRef(null);
       React.useEffect(() => {
         if (ref.current && sourceCanvas) {
@@ -2465,13 +2515,45 @@
           const w = ref.current.width;
           const h = ref.current.height;
           ctx.clearRect(0, 0, w, h);
-          const scale = Math.min(w / sourceCanvas.width, h / sourceCanvas.height);
-          const sw = sourceCanvas.width * scale;
-          const sh = sourceCanvas.height * scale;
-          ctx.drawImage(sourceCanvas, (w - sw) / 2, (h - sh) / 2, sw, sh);
+          
+          const { opacity, filterString, rotate, scale, translateX, translateY } = filters;
+          
+          if (opacity > 0.005) {
+              const thumbScale = Math.min(w / sourceCanvas.width, h / sourceCanvas.height);
+              const sw = sourceCanvas.width * thumbScale;
+              const sh = sourceCanvas.height * thumbScale;
+              
+              ctx.save();
+              ctx.globalAlpha = opacity;
+              ctx.filter = filterString;
+              
+              // 基準點移至中心
+              ctx.translate(w/2, h/2);
+              // 按照縮放比例套用位移 (避免縮圖裡的位移爆出畫布)
+              ctx.translate(translateX * thumbScale, translateY * thumbScale);
+              ctx.rotate((rotate * Math.PI) / 180);
+              ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
+              
+              ctx.translate(-sw/2, -sh/2);
+              ctx.drawImage(sourceCanvas, 0, 0, sw, sh);
+              ctx.restore();
+          }
         }
-      }, [sourceCanvas]);
-      return <canvas ref={ref} width={32} height={32} className="w-full h-full object-contain pointer-events-none drop-shadow-sm" />;
+      }, [sourceCanvas, filters, globalFlipX, globalFlipY]);
+      
+      return <canvas ref={ref} width={64} height={64} className="w-full h-full object-contain pointer-events-none drop-shadow-sm" />;
+      
+    }, (prev, next) => {
+        // 自訂比對，大幅提升效能
+        return prev.sourceCanvas === next.sourceCanvas &&
+               prev.globalFlipX === next.globalFlipX &&
+               prev.globalFlipY === next.globalFlipY &&
+               prev.filters.opacity === next.filters.opacity &&
+               prev.filters.filterString === next.filters.filterString &&
+               prev.filters.rotate === next.filters.rotate &&
+               prev.filters.translateX === next.filters.translateX &&
+               prev.filters.translateY === next.filters.translateY &&
+               prev.filters.scale === next.filters.scale;
     });
 
     const root = createRoot(document.getElementById('root'));
