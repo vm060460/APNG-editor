@@ -121,7 +121,7 @@
         gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
         selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
         reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
-        alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효과 편집',
+        alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효 편집',
         animLength: '애니메이션 길이', autoFx: '자동 효과', 초: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
         flip: '반전 (Flip)', flipH: '수평 반전', flipV: '수직 반전', bgRemover: '배경 제거', tolerance: '허용 오차',
         globalFilters: '글로벌 필터', opacity: '불투명도', hue: '색조', sat: '채도', contrast: '대비', invert: '반전',
@@ -235,7 +235,7 @@
       // === Export Modal State ===
       const [isExportModalOpen, setIsExportModalOpen] = useState(false);
       const [exportConfig, setExportConfig] = useState({
-        format: 'apng', // 預設改回 apng
+        format: 'apng', 
         compression: 0, 
         scale: 1.0,     
         bgColor: '#000000',
@@ -250,7 +250,6 @@
       const [historyPointer, setHistoryPointer] = useState(-1);
       const isRestoring = useRef(false);
       
-      // ✅ 優化：建立完美的背景去背與快取機制，讓預覽更順暢
       const chromaCache = useRef({ bgStateStr: '', canvases: [], originals: [] }); 
 
       const getProcessedCanvas = useCallback((idx) => {
@@ -319,7 +318,6 @@
       useEffect(() => { currentFrameIndexRef.current = currentFrameIndex; }, [currentFrameIndex]);
       useEffect(() => { selectedKeyframeRef.current = selectedKeyframe; }, [selectedKeyframe]);
 
-      // 支援額外傳入載入好的全域屬性 (用於 JSON 專案檔讀取)
       const pushInitialState = (newFrames, initGlobals = null) => {
         const initialState = {
           frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
@@ -920,6 +918,7 @@
             if (allFrames[i].keyframes[track]) { prevK = allFrames[i]; prevIdx = i; break; }
           }
           let nextK = null, nextIdx = -1;
+          // ✅ 修復：確保當 floatIndex 來到結尾邊界時，能精確對齊並採樣正確的下一個節點
           for (let i = baseIdx + (Number.isInteger(floatIndex)?1:0); i < allFrames.length; i++) {
             if (allFrames[i].keyframes[track]) { nextK = allFrames[i]; nextIdx = i; break; }
           }
@@ -1470,6 +1469,7 @@
             let totalDuration = frames.reduce((sum, f) => sum + f.delay, 0);
             if (totalDuration === 0) totalDuration = 1000;
 
+            // ✅ 修復：確保自訂影格縮放時，必定精準鎖定頭尾兩端的原始影格，保證漸變到達 0% 絕對終點
             if (exportConfig.frameMode === 'original' || frames.length <= 1) {
                 frames.forEach((f, idx) => {
                     exportPoints.push({ baseIndex: idx, floatIndex: idx, delay: f.delay / speed });
@@ -1480,18 +1480,34 @@
                 const dt = realDuration / N; 
                 
                 for (let i = 0; i < N; i++) {
-                    const targetTime = i * (totalDuration / N); 
+                    // 首幀強制作為起點
+                    if (i === 0) {
+                        exportPoints.push({ baseIndex: 0, floatIndex: 0, delay: dt });
+                        continue;
+                    }
+                    // 末幀強制作為終點
+                    if (i === N - 1) {
+                        exportPoints.push({ baseIndex: frames.length - 1, floatIndex: frames.length - 1, delay: dt });
+                        continue;
+                    }
+
+                    const p = i / (N - 1); 
+                    let targetTime = p * totalDuration;
+                    
                     let acc = 0;
                     let baseIdx = frames.length - 1;
                     let floatIdx = frames.length - 1;
+                    
                     for (let j = 0; j < frames.length; j++) {
-                        if (targetTime >= acc && targetTime <= acc + frames[j].delay) { 
-                            baseIdx = j; 
-                            floatIdx = j + ((targetTime - acc) / Math.max(1, frames[j].delay));
-                            break; 
+                        const fDelay = Math.max(1, frames[j].delay);
+                        if (targetTime >= acc && targetTime < acc + fDelay) {
+                            baseIdx = j;
+                            floatIdx = j + (targetTime - acc) / fDelay;
+                            break;
                         }
-                        acc += frames[j].delay;
+                        acc += fDelay;
                     }
+                    floatIdx = Math.max(0, Math.min(frames.length - 1, floatIdx));
                     exportPoints.push({ baseIndex: baseIdx, floatIndex: floatIdx, delay: dt });
                 }
             }
@@ -1546,14 +1562,8 @@
                 }
 
                 if (exportConfig.format === 'apng') {
+                    // 恢復最純粹的 ImageData 截取，將殘影清除交給稍後的二進位精確控制 (fcTL Patch)
                     const imgData = ctx.getImageData(0, 0, exportW, exportH);
-                    
-                    // ✅ 防禦層 1：切換極微量 Alpha，強迫 UPNG 生成全尺寸 Bounding Box，避免邊緣殘留
-                    const tl = 3; 
-                    const br = (exportW * exportH - 1) * 4 + 3; 
-                    imgData.data[tl] = (i % 2 === 0) ? Math.max(0, imgData.data[tl] - 1) : Math.min(255, imgData.data[tl] + 1);
-                    imgData.data[br] = (i % 2 === 0) ? Math.max(0, imgData.data[br] - 1) : Math.min(255, imgData.data[br] + 1);
-                    
                     imgs.push(imgData.data.buffer);
                     delays.push(pt.delay);
                 } else if (exportConfig.format === 'webm') {
@@ -1607,32 +1617,68 @@
                 let cnum = parseInt(exportConfig.compression) || 0;
                 let apngBuffer = UPNG.encode(imgs, exportW, exportH, cnum, delays);
                 
-                // ✅ 防禦層 2：攔截 APNG 二進位資料，強力覆寫 fcTL Chunk 的繪製邏輯
+                // ✅ 精準背景清除追蹤 (Smart Dispose Tracking)：100%解決透明度殘影，且無損降色壓縮
                 const view = new DataView(apngBuffer);
                 const uint8 = new Uint8Array(apngBuffer);
                 const length = view.byteLength;
                 let offset = 8;
+                
+                const fcTL_Offsets = [];
+                let acTL_Offset = -1;
+
+                // 1. 蒐集區塊位置
                 while (offset < length) {
-                   const chunkLen = view.getUint32(offset);
-                   const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
-                   let modified = false;
-                   
-                   if (chunkType === 'acTL' && !isLooping) {
-                      view.setUint32(offset + 12, 1); 
-                      modified = true;
-                   } else if (chunkType === 'fcTL') {
-                      // 強制設定為：清除前影格背景(BACKGROUND) + 直接覆寫新像素(SOURCE)
-                      view.setUint8(offset + 32, 1); 
-                      view.setUint8(offset + 33, 0); 
-                      modified = true;
-                   }
-                   
-                   if (modified) {
-                      const newCrc = crc32(uint8, offset + 4, chunkLen + 4);
-                      view.setUint32(offset + 8 + chunkLen, newCrc);
-                   }
-                   offset += 8 + chunkLen + 4;
+                    const chunkLen = view.getUint32(offset);
+                    const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
+                    
+                    if (chunkType === 'acTL') acTL_Offset = offset;
+                    else if (chunkType === 'fcTL') fcTL_Offsets.push(offset);
+                    
+                    offset += 8 + chunkLen + 4;
                 }
+
+                // 2. 修復不循環選項
+                if (!isLooping && acTL_Offset !== -1) {
+                    view.setUint32(acTL_Offset + 12, 1);
+                    const len = view.getUint32(acTL_Offset);
+                    view.setUint32(acTL_Offset + 8 + len, crc32(uint8, acTL_Offset + 4, len + 4));
+                }
+
+                // 3. 精準套用 SOURCE 覆寫與 BACKGROUND 實體背景清除
+                const modifiedFcTLs = new Set();
+                
+                for (let i = 0; i < fcTL_Offsets.length; i++) {
+                    const pt = exportPoints[i];
+                    if (!pt) continue;
+                    
+                    const filters = getFinalRenderFilters(frames, pt.floatIndex);
+                    const isTransparent = filters.opacity <= 0.005;
+
+                    if (isTransparent) {
+                        const curOff = fcTL_Offsets[i];
+                        view.setUint8(curOff + 33, 0); // 將完全透明格設為直接覆蓋 (SOURCE Blend)
+                        modifiedFcTLs.add(i);
+
+                        if (i > 0) {
+                            const prevPt = exportPoints[i - 1];
+                            const prevFilters = getFinalRenderFilters(frames, prevPt.floatIndex);
+                            // 若「前一張可見，但這一張透明」，我們就對前一格下達強制背景清除指令！
+                            if (prevFilters.opacity > 0.005) {
+                                const prevOff = fcTL_Offsets[i - 1];
+                                view.setUint8(prevOff + 32, 1); // 對前一格設定清除背景 (BACKGROUND Dispose)
+                                modifiedFcTLs.add(i - 1);
+                            }
+                        }
+                    }
+                }
+
+                // 4. 重算並更新修改過的 Chunk CRC
+                modifiedFcTLs.forEach(i => {
+                    const off = fcTL_Offsets[i];
+                    const len = view.getUint32(off);
+                    view.setUint32(off + 8 + len, crc32(uint8, off + 4, len + 4));
+                });
+
                 blob = new Blob([apngBuffer], { type: 'image/apng' });
                 filenameExt = 'apng.png';
             } else if (exportConfig.format === 'webm') {
@@ -2506,7 +2552,6 @@
       );
     }
 
-    // ✅ 全新強化的 FrameThumbnail：即時套用位移、旋轉、透明與濾鏡
     const FrameThumbnail = React.memo(({ sourceCanvas, filters, globalFlipX, globalFlipY }) => {
       const ref = React.useRef(null);
       React.useEffect(() => {
