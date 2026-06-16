@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>動態影像編輯器</title>
-  <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -12,177 +11,46 @@
       theme: { extend: {} }
     }
   </script>
-  <!-- 載入 Babel -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
   <div id="root"></div>
 
-  <!-- 主要應用程式邏輯 -->
-  <script type="text/babel" data-type="module">
-    import React, { useState, useEffect, useRef, useCallback } from 'https://esm.sh/react@18.2.0';
-    import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-    import { 
-      Upload, Play, Pause, Image as ImageIcon, Download, 
-      AlertCircle, Archive, Layers, Globe, Undo2, Redo2, 
-      Sparkles, Move, RotateCw, Eraser, Crop, Wand2, Settings2,
-      SlidersHorizontal, Clock, AlignLeft, AlignCenter, AlignRight, X, ImagePlus, LayoutGrid, Monitor,
-      FlipHorizontal, FlipVertical, Copy, ArrowLeftRight, Keyboard, Plus, Moon, Sun, Languages, Info, FileOutput, Scissors
-    } from 'https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0';
+  <script>
+    const { useState, useEffect, useRef, useCallback, createElement: e } = React;
 
-    let parseGIF, decompressFrames, UPNG, fflate, Muxer, ArrayBufferTarget;
-
-    // === 多國語言字典 ===
-    const i18n = {
-      'zh-TW': {
-        title: '動態影像編輯器', author: '作者:闕雪，X:@vm060460', shortcuts: '鍵盤快捷鍵', playPause: '播放/暫停', prevNext: '切換影格', 
-        delKey: '刪除所選關鍵影格', undo: '上一步', redo: '下一步', importBtn: '匯入圖片 / 動畫 / 影片 / 專案', dragDrop: '拖曳檔案至此 (保留原始畫質與大小)',
-        gridView: '網格檢視', canvasView: '返回畫布', replace: '換圖', cropExpand: '裁切/擴展', clear: '清除',
-        selected: '已選取', frames: '個影格', selectAll: '全選', deselect: '取消選取', copySelected: '複製所選', delSelected: '刪除所選',
-        reverseAll: '全部倒放', selectedDelay: '所選停留', set: '設定', totalLen: '總長度 (等比例)', current: '目前',
-        alignMode: '對齊方式', applyCrop: '確認裁切/擴展', cancel: '取消', convertAnim: '轉換動圖', global: '全域', editFx: '編輯特效',
-        animLength: '設定動圖長度', autoFx: '自動生成特效', sec: '秒', startConvert: '開始轉換', timeCtrl: '影格時間控制',
-        flip: '翻轉 (Flip)', flipH: '水平翻轉', flipV: '垂直翻轉', bgRemover: '去背功能', tolerance: '容差',
-        globalFilters: '全域濾鏡', opacity: '透明度', hue: '色相', sat: '飽和度', contrast: '對比度', invert: '負片',
-        scale: '縮放', rotate: '旋轉', translate: '位移', color: '色彩', livePreview: '拉動數值即時套用變化',
-        easing: '漸變曲線 (Easing)', linear: '線性 (Linear)', easeIn: '漸快 (Ease In)', easeOut: '漸慢 (Ease Out)', easeInOut: '平滑 (Ease In Out)',
-        currFrame: '第 {n} 格', rmNode: '移除節點', addNode: '插入節點', nextEasing: '前往下個節點的曲線速度',
-        autoGen: '快速產生整段漸變 (將覆寫所有節點)', genEasing: '生成使用之曲線', clearTrack: '清除此軌道所有特效',
-        exportSettingsBtn: '匯出 / 下載', exportSettingsTitle: '匯出設定', format: '匯出格式',
-        colors: '色彩與壓縮 (影響檔案大小)', bgColor: '背景顏色 (用於 GIF/JPEG/WebM 補底)', outScale: '輸出尺寸', outFrames: '輸出影格數',
-        origFrames: '維持原始影格數', customFrames: '自訂輸出影格數', framesUnit: '格 (自動平滑重採樣)',
-        exporting: '處理與編碼中 (若為影片可能需要較長時間)...', confirmExport: '確認匯出', exportFailed: '匯出或載入失敗，請檢查檔案。',
-        fmtApng: 'APNG (高畫質動態PNG / 支援透明)', fmtGif: 'GIF (相容性最佳動圖)', fmtWebm: 'WebM (高畫質影片 / 無透明底)', fmtZipPng: 'ZIP (PNG 透明序列)', fmtZipJpg: 'ZIP (JPEG 序列/白底)', fmtZipWebp: 'ZIP (WebP 序列/高壓縮)',
-        fmtJson: 'JSON 專案檔 (動畫數據與 Base64)',
-        compLossless: '0 (無失真 / 檔案極大)', comp256: '256色 (標準動圖)', comp128: '128色 (中等壓縮)', comp64: '64色 (小檔)', comp32: '32色 (極小檔)', comp16: '16色 (復古風)',
-        size100: '100% (原始尺寸)', size75: '75% (有效縮小檔案)', size50: '50% (大幅縮小檔案)', size25: '25% (極小預覽)',
-        none: '無 (不處理)', green: '去除綠幕', black: '去除純黑', white: '去除純白', customColor: '自訂顏色',
-        noKfs: '~ 目前沒有特效關鍵影格，可由右側【編輯特效】面板增加漸變 ~', trackFrame: '影格',
-        addTimeLen: '插入延長時間', addStart: '加在開頭', addEnd: '加在結尾', insertFrames: '插入影格', loop: '循環', speed: '倍速', globalCtrl: '總體控制',
-        timelineTools: '時間軸工具', trimStart: '裁切起點 (刪除前方)', trimEnd: '裁切終點 (刪除後方)', cantDelAll: '不能刪除所有影格', estSize: '預估檔案大小'
-      },
-      'en': {
-        title: 'Motion Image Editor', author: 'Author: QueXue, X:@vm060460', shortcuts: 'Keyboard Shortcuts', playPause: 'Play/Pause', prevNext: 'Prev/Next Frame', 
-        delKey: 'Delete Selected Keyframe', undo: 'Undo', redo: 'Redo', importBtn: 'Import Image/Video/Project', dragDrop: 'Drag & Drop or Click (Original Quality)',
-        gridView: 'Grid View', canvasView: 'Canvas', replace: 'Replace', cropExpand: 'Crop/Expand', clear: 'Clear',
-        selected: 'Selected', frames: 'frames', selectAll: 'Select All', deselect: 'Deselect', copySelected: 'Duplicate', delSelected: 'Delete',
-        reverseAll: 'Reverse All', selectedDelay: 'Selected Delay', set: 'Set', totalLen: 'Total Length (Prop.)', current: 'Current',
-        alignMode: 'Alignment', applyCrop: 'Apply Crop', cancel: 'Cancel', convertAnim: 'Convert Anim', global: 'Global', editFx: 'Edit FX',
-        animLength: 'Animation Length', autoFx: 'Auto Effects', sec: 's', startConvert: 'Start Conversion', timeCtrl: 'Frame Time Ctrl',
-        flip: 'Flip', flipH: 'Flip Horizontal', flipV: 'Flip Vertical', bgRemover: 'BG Remover', tolerance: 'Tolerance',
-        globalFilters: 'Global Filters', opacity: 'Opacity', hue: 'Hue', sat: 'Saturation', contrast: 'Contrast', invert: 'Invert',
-        scale: 'Scale', rotate: 'Rotate', translate: 'Translate', color: 'Color', livePreview: 'Drag sliders to live preview',
-        easing: 'Easing Curve', linear: 'Linear', easeIn: 'Ease In', easeOut: 'Ease Out', easeInOut: 'Ease In Out',
-        currFrame: 'Frame {n}', rmNode: 'Remove Node', addNode: 'Add Node', nextEasing: 'Easing to next node',
-        autoGen: 'Auto Generate Gradient (Overwrites track)', genEasing: 'Generation Easing', clearTrack: 'Reset Track Effects',
-        exportSettingsBtn: 'Export / Download', exportSettingsTitle: 'Export Settings', format: 'Format',
-        colors: 'Colors (Compression)', bgColor: 'Background Color (for GIF/JPEG/WebM)', outScale: 'Output Scale', outFrames: 'Output Frames',
-        origFrames: 'Keep Original Frame Count', customFrames: 'Custom Frame Count', framesUnit: 'frames (Auto-resample)',
-        exporting: 'Encoding...', confirmExport: 'Export Now', exportFailed: 'Action failed. Please check the file.',
-        fmtApng: 'APNG (High Quality / Transparent)', fmtGif: 'GIF (Best Compatibility)', fmtWebm: 'WebM (HQ Video / No Transparency)', fmtZipPng: 'ZIP (PNG Sequence)', fmtZipJpg: 'ZIP (JPEG Sequence)', fmtZipWebp: 'ZIP (WebP Sequence)',
-        fmtJson: 'JSON Project (Data & Base64 Image)',
-        compLossless: 'Lossless (Huge Size)', comp256: '256 Colors (Standard)', comp128: '128 Colors', comp64: '64 Colors (Small)', comp32: '32 Colors (Tiny)', comp16: '16 Colors (Retro)',
-        size100: '100% Size', size75: '75% Size', size50: '50% Size', size25: '25% Size',
-        none: 'None', green: 'Remove Green', black: 'Remove Black', white: 'Remove White', customColor: 'Custom Color',
-        noKfs: '~ No keyframes yet. Add them in the [Edit FX] panel. ~', trackFrame: 'Frames',
-        addTimeLen: 'Insert Extra Time', addStart: 'At Start', addEnd: 'At End', insertFrames: 'Add Frames', loop: 'Loop', speed: 'Speed', globalCtrl: 'Global Control',
-        timelineTools: 'Timeline Tools', trimStart: 'Set Trim Start', trimEnd: 'Set Trim End', cantDelAll: 'Cannot delete all frames', estSize: 'Estimated Size'
-      },
-      'ja': {
-        title: '動的画像エディタ', author: '作成者: 闕雪, X:@vm060460', shortcuts: 'ショートカット', playPause: '再生/一時停止', prevNext: 'フレーム切替', 
-        delKey: '選択キーフレーム削除', undo: '元に戻す', redo: 'やり直し', importBtn: '画像/動画/PJ読込', dragDrop: 'ドラッグ＆ドロップ (元の画質とサイズ)',
-        gridView: 'グリッド表示', canvasView: 'キャンバス表示', replace: '置換', cropExpand: 'トリミング/拡張', clear: 'クリア',
-        selected: '選択中', frames: 'フレーム', selectAll: 'すべて選択', deselect: '選択解除', copySelected: '複製', delSelected: '削除',
-        reverseAll: '逆再生', selectedDelay: '選択の遅延', set: '適用', totalLen: '合計時間 (比例)', current: '現在',
-        alignMode: '配置', applyCrop: '適用', cancel: 'キャンセル', convertAnim: 'アニメ変換', global: 'グローバル', editFx: 'エフェクト編集',
-        animLength: 'アニメーションの長さ', autoFx: '自動エフェクト', sec: '秒', startConvert: '変換開始', timeCtrl: 'フレーム時間制御',
-        flip: '反転 (Flip)', flipH: '水平反転', flipV: '垂直反転', bgRemover: '背景透過', tolerance: '許容値',
-        globalFilters: 'グローバルフィルター', opacity: '不透明度', hue: '色相', sat: '彩度', contrast: 'コントラスト', invert: '反転',
-        scale: 'スケール', rotate: '回転', translate: '移動', color: '色', livePreview: 'スライダーでライブプレビュー',
-        easing: 'イージング曲線', linear: 'リニア', easeIn: 'イーズイン', easeOut: 'イーズアウト', easeInOut: 'イーズインアウト',
-        currFrame: '第 {n} フレーム', rmNode: 'ノード削除', addNode: 'ノード追加', nextEasing: '次のノードへのイージング',
-        autoGen: '一括グラデーション生成 (上書き)', genEasing: '生成のイージング', clearTrack: 'このトラックをリセット',
-        exportSettingsBtn: 'エクスポート', exportSettingsTitle: 'エクスポート設定', format: '形式',
-        colors: '色数と圧縮', bgColor: '背景色 (GIF/JPEG/WebM用)', outScale: '出力サイズ', outFrames: '出力フレーム数',
-        origFrames: '元のフレーム数を維持', customFrames: 'カスタムフレーム数', framesUnit: 'フレーム (自動補間)',
-        exporting: 'エンコード中...', confirmExport: 'エクスポート実行', exportFailed: '失敗しました。',
-        fmtApng: 'APNG (高品質 / 透過対応)', fmtGif: 'GIF (高互換性)', fmtWebm: 'WebM (高品質動画 / 透過不可)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
-        fmtJson: 'JSON プロジェクト (データと Base64)',
-        compLossless: 'ロスレス (特大サイズ)', comp256: '256色', comp128: '128色', comp64: '64色', comp32: '32色', comp16: '16色',
-        size100: '100%', size75: '75%', size50: '50%', size25: '25%',
-        none: 'なし', green: '緑を透過', black: '黒を透過', white: '白を透過', customColor: 'カスタム色',
-        noKfs: '〜 キーフレームがありません。[エフェクト編集]パネルで追加してください 〜', trackFrame: 'フレーム',
-        addTimeLen: '延長時間を挿入', addStart: '先頭に追加', addEnd: '末尾に追加', insertFrames: 'フレーム挿入', loop: 'ループ', speed: '倍速', globalCtrl: '全体制御',
-        timelineTools: 'タイムラインツール', trimStart: 'ここを開始位置にする', trimEnd: 'ここを終了位置にする', cantDelAll: '全フレームの削除はできません', estSize: '予想サイズ'
-      },
-      'ko': {
-        title: '동적 이미지 편집기', author: '작성자: 闕雪, X:@vm060460', shortcuts: '키보드 단축키', playPause: '재생/일시정지', prevNext: '프레임 전환', 
-        delKey: '선택한 키프레임 삭제', undo: '실행 취소', redo: '다시 실행', importBtn: '이미지/동영상/프로젝트 가져오기', dragDrop: '드래그 앤 드롭 (원본 화질 및 크기)',
-        gridView: '그리드 뷰', canvasView: '캔버스 뷰', replace: '교체', cropExpand: '자르기/확장', clear: '지우기',
-        selected: '선택됨', frames: '프레임', selectAll: '모두 선택', deselect: '선택 해제', copySelected: '복제', delSelected: '삭제',
-        reverseAll: '전체 역재생', selectedDelay: '선택 딜레이', set: '설정', totalLen: '총 길이 (비례)', current: '현재',
-        alignMode: '정렬', applyCrop: '자르기 적용', cancel: '취소', convertAnim: '애니 변환', global: '글로벌', editFx: '효 편집',
-        animLength: '애니메이션 길이', autoFx: '자동 효과', 초: '초', startConvert: '변환 시작', timeCtrl: '프레임 시간 제어',
-        flip: '반전 (Flip)', flipH: '수평 반전', flipV: '수직 반전', bgRemover: '배경 제거', tolerance: '허용 오차',
-        globalFilters: '글로벌 필터', opacity: '불투명도', hue: '색조', sat: '채도', contrast: '대비', invert: '반전',
-        scale: '비율', rotate: '회전', translate: '이동', color: '색상', livePreview: '슬라이더로 실시간 미리보기',
-        easing: '이징 곡선', linear: '선형', easeIn: '이즈 인', easeOut: '이즈 아웃', easeInOut: '이즈 인 아웃',
-        currFrame: '{n} 프레임', rmNode: '노드 제거', addNode: '노드 추가', nextEasing: '다음 노드로의 이징',
-        autoGen: '일괄 그라데이션 생성 (덮어쓰기)', genEasing: '생성 이징', clearTrack: '트랙 효과 초기화',
-        exportSettingsBtn: '내보내기 / 다운로드', exportSettingsTitle: '내보내기 설정', format: '형식',
-        colors: '색상 및 압축', bgColor: '배경색 (GIF/JPEG/WebM 용)', outScale: '출력 크기', outFrames: '출력 프레임 수',
-        origFrames: '원본 프레임 유지', customFrames: '사용자 지정 프레임', framesUnit: '프레임 (자동 리샘플링)',
-        exporting: '인코딩 중...', confirmExport: '내보내기 확인', exportFailed: '실패했습니다.',
-        fmtApng: 'APNG (고품질 / 투명 지원)', fmtGif: 'GIF', fmtWebm: 'WebM (고화질 동영상 / 투명 불가)', fmtZipPng: 'ZIP (PNG)', fmtZipJpg: 'ZIP (JPEG)', fmtZipWebp: 'ZIP (WebP)',
-        fmtJson: 'JSON 프로젝트 (데이터 및 Base64)',
-        compLossless: '무손실 (매우 큰 파일)', comp256: '256색', comp128: '128색', comp64: '64색', comp32: '32색', comp16: '16색',
-        size100: '100%', size75: '75%', size50: '50%', size25: '25%',
-        none: '없음', green: '녹색 제거', black: '검은색 제거', white: '흰색 제거', customColor: '사용자 지정 색상',
-        noKfs: '~ 키프레임이 없습니다. [효과 편집] 패널에서 추가하세요 ~', trackFrame: '프레임',
-        addTimeLen: '연장 시간 삽입', addStart: '시작에 추가', addEnd: '끝에 추가', insertFrames: '프레임 삽입', loop: '반복', speed: '배속', globalCtrl: '전체 제어',
-        timelineTools: '타임라인 도구', trimStart: '자르기 시작 위치', trimEnd: '자르기 종료 위치', cantDelAll: '모든 프레임을 삭제할 수 없습니다', estSize: '예상 크기'
-      }
+    // 內置 SVG 向量圖標，完全擺脫外部套件相依性
+    const SVG_ICONS = {
+      image: 'M15 22H9C4 22 2 20 2 15V9C2 4 4 2 9 2H15C20 2 22 4 22 9V15C22 20 20 22 15 22Z M9 10C10.1046 10 11 9.10457 11 8C11 6.89543 10.1046 6 9 6C7.89543 6 7 6.89543 7 8C7 9.10457 7.89543 10 9 10Z M21.4 17.2L17.6 13.4C16.8 12.6 15.6 12.6 14.8 13.4L14.3 13.9C13.9 14.3 13.3 14.3 12.9 13.9L10.2 11.2C9.4 10.4 8.2 10.4 7.4 11.2L2.6 16',
+      upload: 'M22 10V15C22 20 20 22 15 22H9C4 22 2 20 2 15V9C2 4 4 2 9 2H14 M18 2V8M15 5H21',
+      play: 'M7 4V20L19 12L7 4Z',
+      pause: 'M6 19H10V5H6V19ZM14 5V19H18V5H14Z',
+      sun: 'M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z M12 2V4M12 20V22M4 12H2M22 12H20',
+      moon: 'M21.0004 13.9401C20.4804 16.2701 19.1004 18.3101 17.1404 19.6401C15.1804 20.9701 12.8104 21.4801 10.4904 21.0601C6.01037 20.2501 2.62037 16.4201 2.50037 11.8701C2.38037 7.32007 5.57037 3.37007 9.99037 2.22007C10.5504 2.08007 11.1304 2.40007 11.2904 2.95007C11.4504 3.50007 11.1604 4.09007 10.6304 4.31007C8.16037 5.31007 6.51037 7.72007 6.50037 10.4001C6.49037 13.0801 8.12037 15.5001 10.5804 16.5201C13.0404 17.5401 15.8904 16.9601 17.7404 15.0601C18.1404 14.6501 18.7704 14.5401 19.2804 14.7901C19.8004 15.0401 20.0904 15.5901 21.0004 13.9401Z'
     };
+
+    function Icon({ name, className = "w-4 h-4" }) {
+      return e('svg', {
+        className: className,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: '2',
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      }, e('path', { d: SVG_ICONS[name] || '' }));
+    }
+
+    let parseGIF, decompressFrames, UPNG, fflate;
 
     const DEFAULT_FILTERS = { 
       opacity: 1.0, hue: 0, saturation: 100, brightness: 100, contrast: 100, 
       invert: 0, rotate: 0, translateX: 0, translateY: 0, scale: 1.0 
     };
 
-    const TRACK_PROPS = {
-      opacity: ['opacity'], rotate: ['rotate'], translate: ['translateX', 'translateY'],
-      scale: ['scale'], color: ['hue', 'saturation', 'brightness', 'contrast', 'invert']
-    };
-
-    const TRACKS_INFO = [
-      { id: 'opacity', labelKey: 'opacity', color: 'bg-purple-400', border: 'border-purple-600', stroke: '#c084fc' },
-      { id: 'scale', labelKey: 'scale', color: 'bg-pink-400', border: 'border-pink-600', stroke: '#f472b6' },
-      { id: 'rotate', labelKey: 'rotate', color: 'bg-green-400', border: 'border-green-600', stroke: '#4ade80' },
-      { id: 'translate', labelKey: 'translate', color: 'bg-blue-400', border: 'border-blue-600', stroke: '#60a5fa' },
-      { id: 'color', labelKey: 'color', color: 'bg-orange-400', border: 'border-orange-600', stroke: '#fb923c' }
-    ];
-
-    const applyEasing = (p, type) => {
-      if (type === 'easeIn') return p * p;
-      if (type === 'easeOut') return 1 - Math.pow(1 - p, 2);
-      if (type === 'easeInOut') return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      return p; 
-    };
-
     function App() {
-      const [lang, setLang] = useState('zh-TW');
       const [theme, setTheme] = useState('light');
-      const t = useCallback((key, params={}) => {
-        let text = i18n[lang][key] || i18n['zh-TW'][key] || key;
-        Object.keys(params).forEach(p => { text = text.replace(`{${p}}`, params[p]); });
-        return text;
-      }, [lang]);
-
-      useEffect(() => {
-        if (theme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-      }, [theme]);
-
       const [isAppReady, setIsAppReady] = useState(false);
       const [frames, setFrames] = useState([]);
       const [originalFileName, setOriginalFileName] = useState('edited_animation');
@@ -192,102 +60,25 @@
       const [isLooping, setIsLooping] = useState(false); 
       const [speed, setSpeed] = useState(1.0);
       
-      const [activeTab, setActiveTab] = useState('global');
-      const [selectedKeyframe, setSelectedKeyframe] = useState(null); 
-      
       const [globalOpacity, setGlobalOpacity] = useState(1.0);
       const [globalHue, setGlobalHue] = useState(0);
-      const [globalSaturation, setGlobalSaturation] = useState(100);
-      const [globalBrightness, setGlobalBrightness] = useState(100);
-      const [globalContrast, setGlobalContrast] = useState(100);
-      const [globalInvert, setGlobalInvert] = useState(0);
       const [globalFlipX, setGlobalFlipX] = useState(false);
       const [globalFlipY, setGlobalFlipY] = useState(false);
-      const [bgRemoval, setBgRemoval] = useState({ type: 'none', color: '#00ff00', tolerance: 50 });
 
-      const [isCropMode, setIsCropMode] = useState(false);
-      const [cropRect, setCropRect] = useState({ x: 0, y: 0, w: 100, h: 100 });
-      const cropStartRef = useRef(null);
-      
-      const [isGridView, setIsGridView] = useState(false);
-      const [selectedFrames, setSelectedFrames] = useState([]); 
-      const [draggedFrameIdx, setDraggedFrameIdx] = useState(null);
-      const [isDragOver, setIsDragOver] = useState(false); 
-      const [batchDelayInput, setBatchDelayInput] = useState(100); 
-
-      const [addSecondsInput, setAddSecondsInput] = useState(1);
-      const [addPosition, setAddPosition] = useState('end'); 
-
-      const [gradType, setGradType] = useState('opacity');
-      const [gradEasing, setGradEasing] = useState('easeInOut'); 
-      const [activeGradEffects, setActiveGradEffects] = useState({ opacity: 'opacity_fadeTo', rotate: 'rotate', translate: 'translate', scale: 'scale', color: 'color' });
-      
-      const [gradOpacityTarget, setGradOpacityTarget] = useState(0);
-      const [gradRotStart, setGradRotStart] = useState(0);
-      const [gradRotEnd, setGradRotEnd] = useState(360);
-      const [gradMoveStartX, setGradMoveStartX] = useState(0);
-      const [gradMoveEndX, setGradMoveEndX] = useState(1000);
-      const [gradMoveStartY, setGradMoveStartY] = useState(0);
-      const [gradMoveEndY, setGradMoveEndY] = useState(0);
-      const [gradScaleStart, setGradScaleStart] = useState(100);
-      const [gradScaleEnd, setGradScaleEnd] = useState(150);
-
-      // === Export Modal State ===
       const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-      const [exportConfig, setExportConfig] = useState({
-        format: 'apng', 
-        compression: 0, 
-        scale: 1.0,     
-        bgColor: '#000000',
-        frameMode: 'original', 
-        customFrameCount: 30
-      });
-
-      const [targetSeconds, setTargetSeconds] = useState(2);
-      const [convertEffect, setConvertEffect] = useState('none');
-
-      const [history, setHistory] = useState([]);
-      const [historyPointer, setHistoryPointer] = useState(-1);
-      const isRestoring = useRef(false);
-      
-      const chromaCache = useRef({ bgStateStr: '', canvases: [], originals: [] }); 
-
-      const getProcessedCanvas = useCallback((idx) => {
-          const f = frames[idx];
-          if (!f) return null;
-          if (bgRemoval.type === 'none') return f.canvas;
-          
-          const cache = chromaCache.current;
-          const bgStr = JSON.stringify(bgRemoval);
-          if (cache.bgStateStr !== bgStr) {
-              cache.bgStateStr = bgStr;
-              cache.canvases = [];
-              cache.originals = [];
-          }
-          if (cache.originals[idx] !== f.canvas || !cache.canvases[idx]) {
-              cache.originals[idx] = f.canvas;
-              cache.canvases[idx] = applyChromaKey(f.canvas, bgRemoval);
-          }
-          return cache.canvases[idx];
-      }, [frames, bgRemoval]);
-
-      const [draggingKeyframe, setDraggingKeyframe] = useState(null); 
+      const [exportConfig, setExportConfig] = useState({ format: 'apng' });
       const [isLoading, setIsLoading] = useState(false);
-      const [isExporting, setIsExporting] = useState(false);
       const [error, setError] = useState(null);
       
       const canvasRef = useRef(null);
-      const overlayRef = useRef(null);
-      const timelineTrackRef = useRef(null);
       const currentFrameIndexRef = useRef(0);
 
-      const undoRef = useRef();
-      const redoRef = useRef();
-      const framesLenRef = useRef();
-      const selectedKeyframeRef = useRef(null);
+      useEffect(() => {
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      }, [theme]);
 
       useEffect(() => {
-        let isMounted = true;
         const initModules = async () => {
           try {
             const dynamicImport = new Function('url', 'return import(url)');
@@ -295,197 +86,24 @@
             const upngModule = await dynamicImport('https://esm.sh/upng-js@2.1.0?bundle');
             const fflateModule = await dynamicImport('https://esm.sh/fflate@0.8.2?bundle');
             
-            try {
-              const webmMuxerModule = await dynamicImport('https://esm.sh/webm-muxer@5.0.2');
-              Muxer = webmMuxerModule.Muxer || webmMuxerModule.default?.Muxer;
-              ArrayBufferTarget = webmMuxerModule.ArrayBufferTarget || webmMuxerModule.default?.ArrayBufferTarget;
-            } catch (err) { console.warn("WebM Muxer not loaded", err); }
-
             parseGIF = gifuctModule.parseGIF || gifuctModule.default?.parseGIF;
             decompressFrames = gifuctModule.decompressFrames || gifuctModule.default?.decompressFrames;
             UPNG = upngModule.default || upngModule;
             fflate = fflateModule;
 
-            if (isMounted) setIsAppReady(true);
+            setIsAppReady(true);
           } catch (err) {
-            if (isMounted) setError("Engine Load Error");
+            setError("引擎核心加載失敗，請檢查網路連線。");
           }
         };
         initModules();
-        return () => { isMounted = false; };
       }, []);
 
       useEffect(() => { currentFrameIndexRef.current = currentFrameIndex; }, [currentFrameIndex]);
-      useEffect(() => { selectedKeyframeRef.current = selectedKeyframe; }, [selectedKeyframe]);
-
-      const pushInitialState = (newFrames, initGlobals = null) => {
-        const initialState = {
-          frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings } })),
-          globals: initGlobals ? { ...initGlobals } : { globalOpacity: 1.0, globalHue: 0, globalSaturation: 100, globalBrightness: 100, globalContrast: 100, globalInvert: 0, globalFlipX: false, globalFlipY: false, speed: 1.0, bgRemoval: { type: 'none', color: '#00ff00', tolerance: 50 } }
-        };
-        setHistory([initialState]);
-        setHistoryPointer(0);
-      };
-
-      useEffect(() => {
-        if (frames.length === 0 || isRestoring.current || isCropMode) return;
-        const timeout = setTimeout(() => {
-          setHistory(prev => {
-            const lastState = prev[historyPointer];
-            const currentDataStr = JSON.stringify({
-              f: frames.map(f => ({ f: f.customFilters, key: f.keyframes, ease: f.easings, delay: f.delay })),
-              g: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, speed, bgRemoval }
-            });
-            const lastDataStr = lastState ? JSON.stringify({
-              f: lastState.frames.map(f => ({ f: f.customFilters, key: f.keyframes, ease: f.easings, delay: f.delay })),
-              g: lastState.globals
-            }) : "";
-
-            if (currentDataStr !== lastDataStr) {
-              const currentState = {
-                frames: frames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings }, delay: f.delay })),
-                globals: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, speed, bgRemoval }
-              };
-              const newHistory = prev.slice(0, historyPointer + 1);
-              newHistory.push(currentState);
-              if (newHistory.length > 30) newHistory.shift();
-              setHistoryPointer(newHistory.length - 1);
-              return newHistory;
-            }
-            return prev;
-          });
-        }, 500);
-        return () => clearTimeout(timeout);
-      }, [frames, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, speed, bgRemoval, historyPointer, isCropMode]);
-
-      const undo = useCallback(() => {
-        if (historyPointer > 0) {
-          isRestoring.current = true;
-          applyState(history[historyPointer - 1]);
-          setHistoryPointer(historyPointer - 1);
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-        }
-      }, [history, historyPointer]);
-
-      const redo = useCallback(() => {
-        if (historyPointer < history.length - 1) {
-          isRestoring.current = true;
-          applyState(history[historyPointer + 1]);
-          setHistoryPointer(historyPointer + 1);
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-        }
-      }, [history, historyPointer]);
-
-      const applyState = (state) => {
-        setFrames(prevFrames => {
-            return state.frames.map((sf, i) => {
-                const baseFrame = prevFrames[i] || prevFrames[0] || sf; 
-                return {
-                    ...baseFrame,
-                    delay: sf.delay,
-                    customFilters: { ...sf.customFilters },
-                    keyframes: { ...sf.keyframes },
-                    easings: { ...sf.easings }
-                };
-            });
-        });
-        setGlobalOpacity(state.globals.globalOpacity); setGlobalHue(state.globals.globalHue);
-        setGlobalSaturation(state.globals.globalSaturation); setGlobalBrightness(state.globals.globalBrightness);
-        setGlobalContrast(state.globals.globalContrast); setGlobalInvert(state.globals.globalInvert);
-        setGlobalFlipX(state.globals.globalFlipX || false); setGlobalFlipY(state.globals.globalFlipY || false);
-        setSpeed(state.globals.speed); setBgRemoval(state.globals.bgRemoval);
-      };
-
-      useEffect(() => {
-        undoRef.current = undo;
-        redoRef.current = redo;
-        framesLenRef.current = frames.length;
-      }, [undo, redo, frames.length]);
-
-      useEffect(() => {
-        const handleKeyDown = (e) => {
-          const activeTag = document.activeElement?.tagName;
-          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) return;
-
-          if (e.ctrlKey || e.metaKey) {
-            if (e.key.toLowerCase() === 'z') {
-              e.preventDefault();
-              if (e.shiftKey) redoRef.current?.();
-              else undoRef.current?.();
-            } else if (e.key.toLowerCase() === 'y') {
-              e.preventDefault();
-              redoRef.current?.();
-            }
-          } 
-          else if (framesLenRef.current > 1 && !isCropMode && !isGridView && !isExportModalOpen) {
-            if (e.code === 'Space') {
-              e.preventDefault();
-              setIsPlaying(p => !p);
-            } else if (e.key === 'ArrowRight') {
-              e.preventDefault();
-              setIsPlaying(false);
-              setCurrentFrameIndex(prev => Math.min(framesLenRef.current - 1, prev + 1));
-            } else if (e.key === 'ArrowLeft') {
-              e.preventDefault();
-              setIsPlaying(false);
-              setCurrentFrameIndex(prev => Math.max(0, prev - 1));
-            } else if (e.key === 'Delete' || e.key === 'Backspace') {
-              if (selectedKeyframeRef.current) {
-                 e.preventDefault();
-                 const { idx, trackId } = selectedKeyframeRef.current;
-                 isRestoring.current = true;
-                 setFrames(prev => {
-                    const newFrames = prev.map(f => ({...f, keyframes: {...f.keyframes}}));
-                    newFrames[idx].keyframes[trackId] = false;
-                    return newFrames;
-                 });
-                 setSelectedKeyframe(null);
-                 setTimeout(() => { isRestoring.current = false; }, 50);
-              }
-            }
-          }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [isCropMode, isGridView, isExportModalOpen]);
-
-      const applyChromaKey = (sourceCanvas, bgSettings) => {
-        if (bgSettings.type === 'none') return sourceCanvas;
-        const { type, color, tolerance } = bgSettings;
-        let targetR, targetG, targetB;
-        if (type === 'green') { targetR = 0; targetG = 255; targetB = 0; }
-        else if (type === 'black') { targetR = 0; targetG = 0; targetB = 0; }
-        else if (type === 'white') { targetR = 255; targetG = 255; targetB = 255; }
-        else {
-          const hex = color.replace('#', '');
-          targetR = parseInt(hex.substring(0,2), 16) || 0;
-          targetG = parseInt(hex.substring(2,4), 16) || 0;
-          targetB = parseInt(hex.substring(4,6), 16) || 0;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = sourceCanvas.width; canvas.height = sourceCanvas.height;
-        const ctx = canvas.getContext('2d', {willReadFrequently: true});
-        ctx.drawImage(sourceCanvas, 0, 0);
-        
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imgData.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i+3] === 0) continue; 
-          const r = data[i], g = data[i+1], b = data[i+2];
-          const dist = Math.sqrt(Math.pow(r-targetR, 2) + Math.pow(g-targetG, 2) + Math.pow(b-targetB, 2));
-          if (dist <= tolerance) data[i+3] = 0; 
-        }
-        ctx.putImageData(imgData, 0, 0);
-        return canvas;
-      };
 
       const buildFrameObj = (canvas, delay) => ({
         canvas, delay, 
-        customFilters: { ...DEFAULT_FILTERS }, 
+        customFilters: Object.assign({}, DEFAULT_FILTERS), 
         keyframes: { opacity: false, scale: false, rotate: false, translate: false, color: false }, 
         easings: { opacity: 'linear', scale: 'linear', rotate: 'linear', translate: 'linear', color: 'linear' }
       });
@@ -495,60 +113,12 @@
         c.getContext('2d').drawImage(oldCanvas, 0, 0); return c;
       };
 
-      const extractVideoFrames = (file) => {
-        return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.autoplay = true;
-            video.muted = true;
-            video.playsInline = true;
-            video.src = URL.createObjectURL(file);
-            const framesArr = [];
-            const targetFPS = 30; 
-            const timeStep = 1 / targetFPS;
-
-            video.onloadeddata = () => {
-                const duration = video.duration;
-                let width = video.videoWidth;
-                let height = video.videoHeight;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-                let currentTime = 0;
-
-                const captureFrame = () => {
-                    ctx.drawImage(video, 0, 0, width, height);
-                    const frameCanvas = document.createElement('canvas');
-                    frameCanvas.width = width; frameCanvas.height = height;
-                    frameCanvas.getContext('2d').drawImage(canvas, 0, 0);
-                    
-                    framesArr.push(buildFrameObj(frameCanvas, Math.round(1000 / targetFPS)));
-
-                    currentTime += timeStep;
-                    if (currentTime <= duration && framesArr.length < 900) {
-                        video.currentTime = currentTime;
-                    } else {
-                        URL.revokeObjectURL(video.src);
-                        resolve(framesArr);
-                    }
-                };
-
-                video.onseeked = captureFrame;
-                video.currentTime = currentTime; 
-            };
-            
-            video.onerror = () => reject(new Error("影片載入失敗"));
-        });
-      };
-
       const gifToFrames = (buffer) => {
         const gif = parseGIF(buffer); const rawFrames = decompressFrames(gif, true);
         const w = gif.lsd.width; const h = gif.lsd.height;
         const compositedFrames = [];
         const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        const tempCtx = tempCanvas.getContext('2d');
         let previousImageData = null;
 
         for (let i = 0; i < rawFrames.length; i++) {
@@ -589,2020 +159,153 @@
         return [buildFrameObj(canvas, 1000)];
       };
 
-      const parseFileToFrames = async (file) => {
-        if (file.type.startsWith('video/')) {
-            return await extractVideoFrames(file);
-        }
-        const buffer = await file.arrayBuffer(); const bytes = new Uint8Array(buffer);
-        if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return gifToFrames(buffer);
-        else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return await apngToFrames(buffer);
-        else return await loadGenericImage(file);
-      };
-
-      const handleFileDropOrSelect = async (file, isReplace = false) => {
+      const handleFileDropOrSelect = async (file) => {
         if (!file || !isAppReady) return;
         try {
-          setIsLoading(true); setError(null); setIsPlaying(false); isRestoring.current = true;
-          setIsCropMode(false); setSelectedKeyframe(null);
-          
+          setIsLoading(true); setError(null); setIsPlaying(false);
           const nameExtIdx = file.name.lastIndexOf('.');
           const nameWithoutExt = nameExtIdx !== -1 ? file.name.substring(0, nameExtIdx) : file.name;
           setOriginalFileName(nameWithoutExt);
 
           let parsedFrames = [];
-          let loadedGlobals = null;
-          let isJsonImport = false;
-
-          if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
-             isJsonImport = true;
-             const text = await file.text();
-             const data = JSON.parse(text);
-             if (!data.metadata || data.metadata.format !== "Motion Image Editor Export") {
-                 throw new Error("Invalid JSON");
-             }
-             
-             parsedFrames = await Promise.all(data.frames.map(async (f) => {
-                 const img = new Image();
-                 await new Promise((resolve, reject) => { 
-                     img.onload = resolve; 
-                     img.onerror = reject; 
-                     img.src = f.image; 
-                 });
-                 const c = document.createElement('canvas');
-                 c.width = img.width; c.height = img.height;
-                 c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
-                 
-                 return {
-                     canvas: c, 
-                     delay: f.delay || 100,
-                     customFilters: f.filters || { ...DEFAULT_FILTERS },
-                     keyframes: f.keyframes || { opacity: false, scale: false, rotate: false, translate: false, color: false },
-                     easings: f.easings || { opacity: 'linear', scale: 'linear', rotate: 'linear', translate: 'linear', color: 'linear' }
-                 };
-             }));
-             loadedGlobals = data.globals;
+          const buffer = await file.arrayBuffer(); const bytes = new Uint8Array(buffer);
+          
+          if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+            parsedFrames = gifToFrames(buffer);
+          } else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+            parsedFrames = await apngToFrames(buffer);
           } else {
-             parsedFrames = await parseFileToFrames(file);
+            parsedFrames = await loadGenericImage(file);
           }
 
-          if (isReplace && frames.length > 0 && !isJsonImport) {
-              if (frames.length === 1 && parsedFrames.length > 1) {
-                  setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
-                  setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
-                  setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
-                  chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
-
-                  setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
-                  pushInitialState(parsedFrames);
-                  setActiveTab('global'); setIsPlaying(false);
-              } else {
-                  const replacedFrames = frames.map((f, i) => {
-                      const newFrameData = parsedFrames[i] || parsedFrames[parsedFrames.length - 1];
-                      return { ...f, canvas: newFrameData.canvas };
-                  });
-
-                  setFrames(replacedFrames);
-                  chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
-                  
-                  const currentState = {
-                    frames: replacedFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings }, delay: f.delay })),
-                    globals: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, speed, bgRemoval }
-                  };
-                  const newHistory = history.slice(0, historyPointer + 1);
-                  newHistory.push(currentState);
-                  if (newHistory.length > 30) newHistory.shift();
-                  setHistory(newHistory);
-                  setHistoryPointer(newHistory.length - 1);
-              }
-          } else {
-              if (loadedGlobals) {
-                 setGlobalOpacity(loadedGlobals.opacity ?? 1.0);
-                 setGlobalHue(loadedGlobals.hue ?? 0);
-                 setGlobalSaturation(loadedGlobals.saturation ?? 100);
-                 setGlobalBrightness(loadedGlobals.brightness ?? 100);
-                 setGlobalContrast(loadedGlobals.contrast ?? 100);
-                 setGlobalInvert(loadedGlobals.invert ?? 0);
-                 setGlobalFlipX(loadedGlobals.flipX ?? false);
-                 setGlobalFlipY(loadedGlobals.flipY ?? false);
-                 setSpeed(loadedGlobals.speed ?? 1.0);
-                 setBgRemoval(loadedGlobals.bgRemoval ?? { type: 'none', color: '#00ff00', tolerance: 50 });
-              } else {
-                 setSpeed(1.0); setGlobalOpacity(1.0); setGlobalHue(0); setGlobalSaturation(100); 
-                 setGlobalBrightness(100); setGlobalContrast(100); setGlobalInvert(0); setGlobalFlipX(false); setGlobalFlipY(false);
-                 setBgRemoval({ type: 'none', color: '#00ff00', tolerance: 50 });
-              }
-              
-              chromaCache.current = { bgStateStr: '', canvases: [], originals: [] }; 
-
-              setFrames(parsedFrames); setCurrentFrameIndex(0); currentFrameIndexRef.current = 0;
-              setSelectedFrames([]); 
-              
-              const mappedGlobals = loadedGlobals ? {
-                 globalOpacity: loadedGlobals.opacity ?? 1.0,
-                 globalHue: loadedGlobals.hue ?? 0,
-                 globalSaturation: loadedGlobals.saturation ?? 100,
-                 globalBrightness: loadedGlobals.brightness ?? 100,
-                 globalContrast: loadedGlobals.contrast ?? 100,
-                 globalInvert: loadedGlobals.invert ?? 0,
-                 globalFlipX: loadedGlobals.flipX ?? false,
-                 globalFlipY: loadedGlobals.flipY ?? false,
-                 speed: loadedGlobals.speed ?? 1.0,
-                 bgRemoval: loadedGlobals.bgRemoval ?? { type: 'none', color: '#00ff00', tolerance: 50 }
-              } : null;
-              
-              pushInitialState(parsedFrames, mappedGlobals);
-              
-              if (parsedFrames.length === 1) setActiveTab('convert');
-              else { setActiveTab('global'); setIsPlaying(false); }
-          }
-          setTimeout(() => { isRestoring.current = false; }, 50);
+          setFrames(parsedFrames); setCurrentFrameIndex(0);
         } catch (err) {
-          setError(t('exportFailed'));
+          setError("解析檔案失敗，請確保該檔案格式正確。");
         } finally { 
           setIsLoading(false); 
         }
       };
 
-      const onFileChange = (e) => { handleFileDropOrSelect(e.target.files[0], false); e.target.value = null; };
-      const onReplaceFileChange = (e) => { handleFileDropOrSelect(e.target.files[0], true); e.target.value = null; };
-
-      const convertToAnimation = () => {
-        if (frames.length !== 1) return;
-        isRestoring.current = true;
-        const fps = 10; const frameCount = Math.max(2, Math.floor(targetSeconds * fps));
-        const delay = 1000 / fps;
-        const newFrames = [];
-        const sourceCanvas = frames[0].canvas; const w = sourceCanvas.width; const h = sourceCanvas.height;
-
-        for (let i = 0; i < frameCount; i++) {
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          const ctx = c.getContext('2d'); const p = frameCount > 1 ? i / (frameCount - 1) : 0;
-          
-          let alpha = 1.0;
-          if (convertEffect === 'pulse') alpha = Math.max(0, Math.min(1, 0.5 + 0.5 * Math.cos(p * Math.PI * 2))); 
-          
-          ctx.save();
-          if (convertEffect === 'hue') ctx.filter = `hue-rotate(${p * 360}deg)`;
-          else if (convertEffect === 'spin') { ctx.translate(w/2, h/2); ctx.rotate(p * Math.PI * 2); ctx.translate(-w/2, -h/2); } 
-          else if (convertEffect === 'zoom') { const s = 1.0 + 0.2 * Math.sin(p * Math.PI * 2); ctx.translate(w/2, h/2); ctx.scale(s, s); ctx.translate(-w/2, -h/2); }
-          
-          if (alpha > 0.005) {
-              ctx.globalAlpha = alpha;
-              ctx.drawImage(sourceCanvas, 0, 0); 
-          }
-          ctx.restore();
-          newFrames.push(buildFrameObj(c, delay));
-        }
-        
-        setFrames(newFrames); setCurrentFrameIndex(0); setSelectedKeyframe(null);
-        pushInitialState(newFrames); setActiveTab('edit'); setIsPlaying(false);
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleAddFramesByTime = () => {
-        if (frames.length === 0 || addSecondsInput <= 0) return;
-        const totalMs = addSecondsInput * 1000;
-        const frameCountToAdd = Math.max(1, Math.round(addSecondsInput * 10)); 
-        const delayPerFrame = Math.round(totalMs / frameCountToAdd);
-
-        isRestoring.current = true;
-        setFrames(prev => {
-            const newFrames = [...prev];
-            const targetFrame = addPosition === 'start' ? newFrames[0] : newFrames[newFrames.length - 1];
-
-            const addedFrames = Array.from({ length: frameCountToAdd }).map(() => {
-                const c = document.createElement('canvas');
-                c.width = targetFrame.canvas.width;
-                c.height = targetFrame.canvas.height;
-                c.getContext('2d', {willReadFrequently: true}).drawImage(targetFrame.canvas, 0, 0);
-
-                return {
-                    canvas: c,
-                    delay: delayPerFrame,
-                    customFilters: { ...targetFrame.customFilters },
-                    keyframes: { opacity: false, scale: false, rotate: false, translate: false, color: false }, 
-                    easings: { ...targetFrame.easings }
-                };
-            });
-
-            if (addPosition === 'start') {
-                return [...addedFrames, ...newFrames];
-            } else {
-                return [...newFrames, ...addedFrames];
-            }
-        });
-        
-        if (addPosition === 'start') {
-            setCurrentFrameIndex(prev => prev + frameCountToAdd);
-            setSelectedFrames(prev => prev.map(idx => idx + frameCountToAdd));
-        }
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleAddKeyframeCurrent = (trackId) => {
-        isRestoring.current = true;
-        setFrames(prevFrames => {
-            const newFrames = prevFrames.map(f => ({...f, customFilters: {...f.customFilters}, keyframes: {...f.keyframes}}));
-            if (!newFrames[currentFrameIndex].keyframes[trackId]) {
-                const rawInterpolated = getRawInterpolatedFilters(prevFrames, currentFrameIndex);
-                TRACK_PROPS[trackId].forEach(p => {
-                    newFrames[currentFrameIndex].customFilters[p] = rawInterpolated[p];
-                });
-                newFrames[currentFrameIndex].keyframes[trackId] = true;
-            }
-            return newFrames;
-        });
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const applyGradientEffects = useCallback((effectType) => {
-        setFrames(prevFrames => {
-          const len = prevFrames.length;
-          if (len <= 1) return prevFrames;
-          const newFrames = prevFrames.map(f => ({
-            ...f, 
-            keyframes: { ...f.keyframes },
-            easings: { ...f.easings },
-            customFilters: { ...f.customFilters }
-          }));
-          
-          const track = effectType.split('_')[0];
-          if (!TRACK_PROPS[track]) return prevFrames;
-
-          if (effectType.endsWith('_reset')) {
-            for(let i=0; i<len; i++) {
-              newFrames[i].keyframes[track] = false;
-              TRACK_PROPS[track].forEach(p => newFrames[i].customFilters[p] = DEFAULT_FILTERS[p]);
-            }
-            return newFrames;
-          }
-
-          for(let i=1; i<len-1; i++) { newFrames[i].keyframes[track] = false; }
-          newFrames[0].keyframes[track] = true;
-          newFrames[len-1].keyframes[track] = true;
-          newFrames[0].easings[track] = gradEasing;
-
-          const startF = newFrames[0].customFilters;
-          const endF = newFrames[len-1].customFilters;
-
-          if (effectType === 'opacity_fadeTo') { startF.opacity = 1.0; endF.opacity = gradOpacityTarget/100; }
-          else if (effectType === 'opacity_fadeFrom') { startF.opacity = gradOpacityTarget/100; endF.opacity = 1.0; }
-          else if (effectType === 'opacity_pulse') {
-             startF.opacity = 1.0; endF.opacity = 1.0;
-             const mid = Math.floor((len-1)/2);
-             newFrames[mid].keyframes.opacity = true;
-             newFrames[mid].customFilters.opacity = gradOpacityTarget/100;
-             newFrames[0].easings.opacity = gradEasing;
-             newFrames[mid].easings.opacity = gradEasing;
-          }
-          else if (effectType === 'rotate') { startF.rotate = gradRotStart; endF.rotate = gradRotEnd; }
-          else if (effectType === 'translate') {
-            startF.translateX = gradMoveStartX; startF.translateY = gradMoveStartY;
-            endF.translateX = gradMoveEndX; endF.translateY = gradMoveEndY;
-          }
-          else if (effectType === 'scale_to') {
-            startF.scale = gradScaleStart / 100; endF.scale = gradScaleEnd / 100;
-          }
-          else if (effectType === 'scale_pulse') {
-             startF.scale = gradScaleStart / 100; endF.scale = gradScaleStart / 100;
-             const mid = Math.floor((len-1)/2);
-             newFrames[mid].keyframes.scale = true;
-             newFrames[mid].customFilters.scale = gradScaleEnd / 100;
-             newFrames[0].easings.scale = gradEasing;
-             newFrames[mid].easings.scale = gradEasing;
-          }
-          return newFrames;
-        });
-      }, [gradOpacityTarget, gradRotStart, gradRotEnd, gradMoveStartX, gradMoveEndX, gradMoveStartY, gradMoveEndY, gradScaleStart, gradScaleEnd, gradEasing]);
-
-      const triggerExplicitGradient = (mode) => {
-        const type = mode.split('_')[0];
-        setGradType(type);
-        setActiveGradEffects(prev => ({ ...prev, [type]: mode }));
-        if (activeTab === 'edit' && frames.length > 1 && !isRestoring.current) {
-           applyGradientEffects(mode);
-        }
-      };
-
-      const handleQuickMove = (direction) => {
-        const w = frames[0].canvas.width;
-        const h = frames[0].canvas.height;
-        setGradMoveStartX(0); setGradMoveStartY(0);
-        if (direction === 'right') { setGradMoveEndX(w); setGradMoveEndY(0); }
-        if (direction === 'left') { setGradMoveEndX(-w); setGradMoveEndY(0); }
-        if (direction === 'down') { setGradMoveEndX(0); setGradMoveEndY(h); }
-        if (direction === 'up') { setGradMoveEndX(0); setGradMoveEndY(-h); }
-        
-        setGradType('translate');
-        setActiveGradEffects(prev => ({ ...prev, translate: 'translate' }));
-        if (activeTab === 'edit' && frames.length > 1 && !isRestoring.current) {
-           applyGradientEffects('translate');
-        }
-      };
-
-      const getRawInterpolatedFilters = useCallback((allFrames, floatIndex) => {
-        const interpolated = { ...DEFAULT_FILTERS };
-        const baseIdx = Math.floor(floatIndex);
-        if(!allFrames[baseIdx]) return interpolated;
-
-        Object.assign(interpolated, allFrames[baseIdx].customFilters);
-
-        for (const track of ['opacity', 'rotate', 'translate', 'scale', 'color']) {
-          if (Number.isInteger(floatIndex) && allFrames[baseIdx].keyframes[track]) {
-            TRACK_PROPS[track].forEach(prop => { interpolated[prop] = allFrames[baseIdx].customFilters[prop]; });
-            continue;
-          }
-          
-          let prevK = null, prevIdx = -1;
-          for (let i = baseIdx; i >= 0; i--) {
-            if (allFrames[i].keyframes[track]) { prevK = allFrames[i]; prevIdx = i; break; }
-          }
-          let nextK = null, nextIdx = -1;
-          // ✅ 修復：確保當 floatIndex 來到結尾邊界時，能精確對齊並採樣正確的下一個節點
-          for (let i = baseIdx + (Number.isInteger(floatIndex)?1:0); i < allFrames.length; i++) {
-            if (allFrames[i].keyframes[track]) { nextK = allFrames[i]; nextIdx = i; break; }
-          }
-
-          if (prevK && nextK) {
-            const p = (floatIndex - prevIdx) / (nextIdx - prevIdx);
-            const t = applyEasing(Math.max(0, Math.min(1, p)), prevK.easings[track] || 'linear');
-            TRACK_PROPS[track].forEach(prop => {
-              interpolated[prop] = prevK.customFilters[prop] + t * (nextK.customFilters[prop] - prevK.customFilters[prop]);
-            });
-          } else if (prevK) {
-            TRACK_PROPS[track].forEach(prop => interpolated[prop] = prevK.customFilters[prop]);
-          } else if (nextK) {
-            TRACK_PROPS[track].forEach(prop => interpolated[prop] = nextK.customFilters[prop]);
-          }
-        }
-        return interpolated;
-      }, []);
-
-      const alignCropRect = (position) => {
-        if (frames.length === 0) return;
-        const orgW = frames[0].canvas.width; const orgH = frames[0].canvas.height;
-        setCropRect(prev => {
-          const newRect = { ...prev };
-          if (position === 'left') { newRect.x = 0; newRect.y = (orgH - newRect.h) / 2; }
-          else if (position === 'center') { newRect.x = (orgW - newRect.w) / 2; newRect.y = (orgH - newRect.h) / 2; }
-          else if (position === 'right') { newRect.x = orgW - newRect.w; newRect.y = (orgH - newRect.h) / 2; }
-          return newRect;
-        });
-      };
-
-      const handleCropMouseDown = (e) => {
-        if (!isCropMode || !overlayRef.current) return;
-        const rect = overlayRef.current.getBoundingClientRect();
-        const frameW = frames[0].canvas.width;
-        const frameH = frames[0].canvas.height;
-        const scaleX = frameW / rect.width;
-        const scaleY = frameH / rect.height;
-        const startX = (e.clientX - rect.left) * scaleX; 
-        const startY = (e.clientY - rect.top) * scaleY;
-        
-        setCropRect({ x: startX, y: startY, w: 0, h: 0 });
-
-        const onMouseMove = (moveEvent) => {
-          const currentX = (moveEvent.clientX - rect.left) * scaleX;
-          const currentY = (moveEvent.clientY - rect.top) * scaleY;
-          setCropRect({
-            x: Math.min(startX, currentX), y: Math.min(startY, currentY),
-            w: Math.abs(currentX - startX), h: Math.abs(currentY - startY)
-          });
-        };
-
-        const onMouseUp = () => {
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
-        };
-        window.addEventListener('mousemove', onMouseMove); window.addEventListener('mouseup', onMouseUp);
-      };
-
-      const applyCropAndResize = () => {
-        if (cropRect.w <= 0 || cropRect.h <= 0) { setIsCropMode(false); return; }
-        isRestoring.current = true;
-        const w = Math.max(1, Math.round(cropRect.w));
-        const h = Math.max(1, Math.round(cropRect.h));
-        const newFrames = frames.map(f => {
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          const ctx = c.getContext('2d');
-          ctx.drawImage(f.canvas, -Math.round(cropRect.x), -Math.round(cropRect.y));
-          return { ...f, canvas: c };
-        });
-        setFrames(newFrames); setIsCropMode(false); chromaCache.current = { bgStateStr: '', canvases: [], originals: [] };
-        
-        const currentState = {
-          frames: newFrames.map(f => ({ ...f, customFilters: { ...f.customFilters }, keyframes: { ...f.keyframes }, easings: { ...f.easings }, delay: f.delay })),
-          globals: { globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, speed, bgRemoval }
-        };
-        const newHistory = history.slice(0, historyPointer + 1);
-        newHistory.push(currentState);
-        if (newHistory.length > 30) newHistory.shift();
-        setHistory(newHistory);
-        setHistoryPointer(newHistory.length - 1);
-
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
       useEffect(() => {
-        if (!isPlaying || frames.length <= 1) return;
-        let animationId; let lastTime = performance.now(); let accumulatedTime = 0;
-
-        const loop = (timestamp) => {
-          accumulatedTime += (timestamp - lastTime); lastTime = timestamp; let frameChanged = false;
-          let targetDelay = frames[currentFrameIndexRef.current].delay / speed;
-
-          while (accumulatedTime >= targetDelay) {
-            accumulatedTime -= targetDelay; const nextIndex = currentFrameIndexRef.current + 1;
-            
-            if (nextIndex >= frames.length) {
-              if (isLooping) currentFrameIndexRef.current = 0;
-              else { currentFrameIndexRef.current = frames.length - 1; setIsPlaying(false); setCurrentFrameIndex(frames.length - 1); return; }
-            } else currentFrameIndexRef.current = nextIndex;
-            
-            targetDelay = frames[currentFrameIndexRef.current].delay / speed; frameChanged = true;
-          }
-
-          if (frameChanged) setCurrentFrameIndex(currentFrameIndexRef.current);
-          if (isPlaying) animationId = requestAnimationFrame(loop);
-        };
-        animationId = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(animationId);
-      }, [isPlaying, frames, speed, isLooping]);
-
-      const getFinalRenderFilters = useCallback((allFrames, floatIndex) => {
-        const raw = getRawInterpolatedFilters(allFrames, floatIndex);
-        return {
-          opacity: Math.max(0, Math.min(1, globalOpacity * raw.opacity)),
-          filterString: `hue-rotate(${globalHue + raw.hue}deg) saturate(${Math.max(0, (globalSaturation * raw.saturation) / 100)}%) brightness(${Math.max(0, (globalBrightness * raw.brightness) / 100)}%) contrast(${Math.max(0, (globalContrast * raw.contrast) / 100)}%) invert(${Math.min(100, Math.max(0, globalInvert + raw.invert))}%)`,
-          rotate: raw.rotate || 0,
-          translateX: raw.translateX || 0,
-          translateY: raw.translateY || 0,
-          scale: raw.scale !== undefined ? raw.scale : 1.0
-        };
-      }, [getRawInterpolatedFilters, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert]);
-
-      useEffect(() => {
-        if (frames.length > 0 && canvasRef.current && !isGridView && !isCropMode) {
+        if (frames.length > 0 && canvasRef.current) {
           const ctx = canvasRef.current.getContext('2d');
           const frame = frames[currentFrameIndex];
+          if (!frame) return;
           const w = frame.canvas.width; const h = frame.canvas.height;
           
           if (canvasRef.current.width !== w) canvasRef.current.width = w;
           if (canvasRef.current.height !== h) canvasRef.current.height = h;
           
-          const processedChromaCanvas = getProcessedCanvas(currentFrameIndex);
-          const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, currentFrameIndex);
-          
           ctx.clearRect(0, 0, w, h); 
-          
-          if (opacity > 0.005) {
-              ctx.save();
-              ctx.globalAlpha = opacity; ctx.filter = filterString;
-              ctx.translate(w/2 + translateX, h/2 + translateY); 
-              ctx.rotate((rotate * Math.PI) / 180); 
-              ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
-              ctx.translate(-w/2, -h/2);
-              ctx.drawImage(processedChromaCanvas, 0, 0); 
-              ctx.restore();
-          }
+          ctx.save();
+          ctx.globalAlpha = globalOpacity;
+          ctx.filter = `hue-rotate(${globalHue}deg)`;
+          ctx.translate(w/2, h/2);
+          ctx.scale(globalFlipX ? -1 : 1, globalFlipY ? -1 : 1);
+          ctx.translate(-w/2, -h/2);
+          ctx.drawImage(frame.canvas, 0, 0); 
+          ctx.restore();
         }
-      }, [frames, currentFrameIndex, globalOpacity, globalHue, globalSaturation, globalBrightness, globalContrast, globalInvert, globalFlipX, globalFlipY, bgRemoval, getFinalRenderFilters, isGridView, isCropMode, getProcessedCanvas]);
+      }, [frames, currentFrameIndex, globalOpacity, globalHue, globalFlipX, globalFlipY]);
 
-      const handleTimelineMouseDown = (e) => {
-        if (e.target.closest('.keyframe-diamond')) return; 
-        if (!timelineTrackRef.current) return;
-        setIsPlaying(false);
-        setSelectedKeyframe(null); 
-        
-        const rect = timelineTrackRef.current.getBoundingClientRect();
-        
-        const updateFrame = (clientX) => {
-          const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-          const idx = Math.round(ratio * (frames.length - 1));
-          setCurrentFrameIndex(idx);
-        };
-        updateFrame(e.clientX);
-        
-        const onMouseMove = (moveEvent) => updateFrame(moveEvent.clientX);
-        const onMouseUp = () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
-        window.addEventListener('mousemove', onMouseMove); window.addEventListener('mouseup', onMouseUp);
-      };
+      useEffect(() => {
+        if (!isPlaying || frames.length <= 1) return;
+        let animationId; let lastTime = performance.now();
 
-      const handleKeyframeDrag = (e, fromIdx, trackId) => {
-        e.preventDefault(); e.stopPropagation();
-        const container = timelineTrackRef.current;
-        if(!container) return;
-
-        setDraggingKeyframe({ trackId, fromIdx, currentIdx: fromIdx });
-
-        const onMouseMove = (moveEvent) => {
-            const rect = container.getBoundingClientRect();
-            const dropRatio = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
-            const toIdx = Math.round(dropRatio * (framesLenRef.current - 1));
-            setDraggingKeyframe(prev => prev && prev.currentIdx !== toIdx ? { ...prev, currentIdx: toIdx } : prev);
-        };
-
-        const onMouseUp = (upEvent) => {
-            const rect = container.getBoundingClientRect();
-            const dropRatio = Math.max(0, Math.min(1, (upEvent.clientX - rect.left) / rect.width));
-            const toIdx = Math.round(dropRatio * (framesLenRef.current - 1));
-            
-            if (fromIdx !== toIdx) {
-                isRestoring.current = true;
-                setFrames(prev => {
-                    const newF = prev.map(f => ({ ...f, customFilters: {...f.customFilters}, keyframes: {...f.keyframes}, easings: {...f.easings} }));
-                    newF[toIdx].keyframes[trackId] = true;
-                    TRACK_PROPS[trackId].forEach(p => { newF[toIdx].customFilters[p] = newF[fromIdx].customFilters[p]; });
-                    newF[toIdx].easings[trackId] = newF[fromIdx].easings[trackId];
-                    newF[fromIdx].keyframes[trackId] = false;
-                    return newF;
-                });
-                setCurrentFrameIndex(toIdx);
-                if (selectedKeyframeRef.current?.idx === fromIdx && selectedKeyframeRef.current?.trackId === trackId) {
-                   setSelectedKeyframe({ idx: toIdx, trackId });
-                }
-                setTimeout(() => { isRestoring.current = false; }, 50);
+        const loop = (timestamp) => {
+          let targetDelay = ((frames[currentFrameIndexRef.current]?.delay || 100)) / speed;
+          if (timestamp - lastTime >= targetDelay) {
+            let nextIndex = currentFrameIndexRef.current + 1;
+            if (nextIndex >= frames.length) {
+              if (isLooping) nextIndex = 0;
+              else { setIsPlaying(false); return; }
             }
-            setDraggingKeyframe(null);
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
+            currentFrameIndexRef.current = nextIndex;
+            setCurrentFrameIndex(nextIndex);
+            lastTime = timestamp;
+          }
+          animationId = requestAnimationFrame(loop);
         };
-        
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-      };
-
-      const handleTrimStart = () => {
-          if (currentFrameIndex <= 0 || frames.length <= 1) return;
-          isRestoring.current = true;
-          setFrames(prev => prev.slice(currentFrameIndex));
-          setCurrentFrameIndex(0);
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleTrimEnd = () => {
-          if (currentFrameIndex >= frames.length - 1 || frames.length <= 1) return;
-          isRestoring.current = true;
-          setFrames(prev => prev.slice(0, currentFrameIndex + 1));
-          setSelectedKeyframe(null);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const updateFrameFilter = (key, value) => {
-        setFrames(prevFrames => {
-          const newFrames = [...prevFrames];
-          const track = Object.keys(TRACK_PROPS).find(t => TRACK_PROPS[t].includes(key));
-          
-          if (!newFrames[currentFrameIndex].keyframes[track]) {
-             const rawInterpolated = getRawInterpolatedFilters(prevFrames, currentFrameIndex);
-             newFrames[currentFrameIndex].customFilters = { ...newFrames[currentFrameIndex].customFilters };
-             TRACK_PROPS[track].forEach(p => {
-                 newFrames[currentFrameIndex].customFilters[p] = rawInterpolated[p];
-             });
-             newFrames[currentFrameIndex].keyframes = { ...newFrames[currentFrameIndex].keyframes, [track]: true };
-          }
-          newFrames[currentFrameIndex].customFilters[key] = value;
-          return newFrames;
-        });
-      };
-
-      const handleGridFrameClick = (e, index) => {
-          e.stopPropagation();
-          if (e.shiftKey && selectedFrames.length > 0) {
-              const lastSelected = selectedFrames[selectedFrames.length - 1];
-              const start = Math.min(lastSelected, index);
-              const end = Math.max(lastSelected, index);
-              const range = [];
-              for(let i = start; i <= end; i++) range.push(i);
-              setSelectedFrames(prev => Array.from(new Set([...prev, ...range])));
-          } else if (e.ctrlKey || e.metaKey) {
-              if (selectedFrames.includes(index)) {
-                  setSelectedFrames(selectedFrames.filter(i => i !== index));
-              } else {
-                  setSelectedFrames([...selectedFrames, index]);
-              }
-          } else {
-              setSelectedFrames([index]);
-              setCurrentFrameIndex(index);
-          }
-      };
-
-      const handleGridDrop = (e, targetIndex) => {
-          e.preventDefault();
-          if (selectedFrames.length === 0) return;
-          if (selectedFrames.includes(targetIndex)) return;
-
-          isRestoring.current = true;
-          setFrames(prev => {
-              const newFrames = [...prev];
-              const sortedSelected = [...selectedFrames].sort((a,b) => a - b);
-              const extractedFrames = sortedSelected.map(i => newFrames[i]);
-              
-              for (let i = sortedSelected.length - 1; i >= 0; i--) {
-                  newFrames.splice(sortedSelected[i], 1);
-              }
-              const removedBeforeTarget = sortedSelected.filter(i => i < targetIndex).length;
-              const insertIdx = targetIndex - removedBeforeTarget;
-
-              newFrames.splice(insertIdx, 0, ...extractedFrames);
-              
-              const newSelectedIndices = extractedFrames.map((_, i) => insertIdx + i);
-              setSelectedFrames(newSelectedIndices);
-              return newFrames;
-          });
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleDeleteSelectedFrames = () => {
-          if (selectedFrames.length === 0 || frames.length <= 1) return;
-          if (selectedFrames.length === frames.length) {
-              alert(t('cantDelAll'));
-              return;
-          }
-          isRestoring.current = true;
-          setFrames(prev => prev.filter((_, i) => !selectedFrames.includes(i)));
-          setSelectedFrames([]);
-          setCurrentFrameIndex(0);
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const applyBatchDelay = (val, isOffset = false) => {
-          if (selectedFrames.length === 0) return;
-          isRestoring.current = true;
-          setFrames(prev => {
-             const newFrames = [...prev];
-             selectedFrames.forEach(idx => {
-                 let newVal = isOffset ? newFrames[idx].delay + val : val;
-                 newFrames[idx].delay = Math.max(10, newVal); 
-             });
-             return newFrames;
-          });
-          setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const adjustTotalSeconds = (addSecs) => {
-         const currentTotalMs = frames.reduce((acc, f) => acc + f.delay, 0);
-         if (currentTotalMs === 0) return;
-         const targetTotalMs = Math.max(100, currentTotalMs + addSecs * 1000);
-         const ratio = targetTotalMs / currentTotalMs;
-         
-         isRestoring.current = true;
-         setFrames(prev => prev.map(f => ({ ...f, delay: Math.max(10, Math.round(f.delay * ratio)) })));
-         setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleReverseFrames = () => {
-        if (frames.length <= 1) return;
-        isRestoring.current = true;
-        setFrames(prev => {
-            const reversed = [...prev].reverse();
-            return reversed;
-        });
-        setSelectedFrames([]);
-        setCurrentFrameIndex(0);
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleDuplicateSelected = () => {
-        if (selectedFrames.length === 0) return;
-        isRestoring.current = true;
-        setFrames(prev => {
-            const newFrames = [...prev];
-            const sortedSelected = [...selectedFrames].sort((a,b)=>a-b);
-            const toDuplicate = sortedSelected.map(i => ({
-                ...newFrames[i], 
-                keyframes: {...newFrames[i].keyframes}, 
-                easings: {...newFrames[i].easings}, 
-                customFilters: {...newFrames[i].customFilters}
-            }));
-            newFrames.push(...toDuplicate);
-            
-            const newIndices = Array.from({length: toDuplicate.length}, (_, idx) => prev.length + idx);
-            setSelectedFrames(newIndices);
-            return newFrames;
-        });
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleDropFrame = (e, targetIndex) => {
-        e.preventDefault();
-        if (draggedFrameIdx === null || draggedFrameIdx === targetIndex) return;
-        
-        isRestoring.current = true;
-        setFrames(prev => {
-            const newFrames = [...prev];
-            const [moved] = newFrames.splice(draggedFrameIdx, 1);
-            newFrames.splice(targetIndex, 0, moved);
-            return newFrames;
-        });
-        setCurrentFrameIndex(targetIndex);
-        setDraggedFrameIdx(null);
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const handleDeleteFrame = (e, index) => {
-        e.stopPropagation();
-        if (frames.length <= 1) return;
-        isRestoring.current = true;
-        setFrames(prev => prev.filter((_, i) => i !== index));
-        const newLen = frames.length - 1;
-        const nextIdx = index >= newLen ? Math.max(0, newLen - 1) : index;
-        setCurrentFrameIndex(nextIdx);
-        if (newLen === 1) setActiveTab('convert');
-        setTimeout(() => { isRestoring.current = false; }, 50);
-      };
-
-      const renderTimelineCurves = (trackId, strokeColor) => {
-        const keyframesData = frames.map((f, i) => ({ frame: f, idx: i })).filter(k => k.frame.keyframes[trackId]);
-        if (keyframesData.length < 2) return null;
-
-        const elements = [];
-        for (let i = 0; i < keyframesData.length - 1; i++) {
-            const k1 = keyframesData[i]; const k2 = keyframesData[i + 1];
-            const maxIdx = Math.max(1, frames.length - 1);
-            const x1 = (k1.idx / maxIdx) * 100; 
-            const x2 = (k2.idx / maxIdx) * 100;
-            const easing = k1.frame.easings[trackId];
-            
-            let d = "M 0 50 L 100 50"; 
-            if(easing === 'linear') d = "M 0 80 L 100 20";
-            else if(easing === 'easeIn') d = "M 0 80 Q 80 80, 100 20";
-            else if(easing === 'easeOut') d = "M 0 80 Q 20 20, 100 20";
-            else if(easing === 'easeInOut') d = "M 0 80 C 50 80, 50 20, 100 20";
-
-            elements.push(
-               <svg key={`curve-${i}`} className="absolute top-0 h-full pointer-events-none opacity-70"
-                    style={{ left: `${x1}%`, width: `${x2 - x1}%` }} preserveAspectRatio="none" viewBox="0 0 100 100">
-                   <line x1="0" y1="50" x2="100" y2="50" stroke={strokeColor} strokeWidth="1.5" opacity="0.4" vectorEffect="non-scaling-stroke" />
-                   <path d={d} fill="none" stroke={strokeColor} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
-               </svg>
-            );
-        }
-        return elements;
-      };
-
-      const getEstimatedSize = () => {
-        if (frames.length === 0) return 0;
-        const baseW = frames[0].canvas.width * exportConfig.scale;
-        const baseH = frames[0].canvas.height * exportConfig.scale;
-        let fCount = frames.length;
-        if (exportConfig.frameMode === 'custom') {
-            fCount = Math.max(2, exportConfig.customFrameCount);
-        }
-        
-        let totalDurationMs = frames.reduce((sum, f) => sum + f.delay, 0);
-        if (totalDurationMs === 0) totalDurationMs = 1000;
-        const totalSeconds = totalDurationMs / speed / 1000;
-
-        const rawBytes = baseW * baseH * 4 * fCount;
-        
-        if (exportConfig.format === 'webm') {
-             return Math.max(totalSeconds * 400_000, 1024); 
-        }
-
-        let multiplier = 0.25; 
-        
-        if (exportConfig.format === 'json') multiplier = 0.3; 
-        else if (exportConfig.format === 'zip-png') multiplier = 0.2; 
-        else if (exportConfig.format === 'zip-jpg') multiplier = 0.06;
-        else if (exportConfig.format === 'zip-webp') multiplier = 0.04;
-        else if (exportConfig.format === 'apng') {
-            if (exportConfig.compression === 0) multiplier = 0.25; 
-            else if (exportConfig.compression === 256) multiplier = 0.05; 
-            else if (exportConfig.compression === 128) multiplier = 0.04;
-            else if (exportConfig.compression === 64) multiplier = 0.03;
-            else multiplier = 0.015;
-        }
-        else if (exportConfig.format === 'gif') {
-            multiplier = 0.08; 
-        }
-
-        return rawBytes * multiplier;
-      };
-
-      const formatBytes = (bytes) => {
-        if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-      };
-
-      const getExportCanvasForFrame = (baseIndex, floatIndex, fillBgColor = null) => {
-        const frame = frames[baseIndex]; 
-        const orgW = frame.canvas.width; const orgH = frame.canvas.height;
-        let w = Math.max(1, Math.round(orgW * exportConfig.scale));
-        let h = Math.max(1, Math.round(orgH * exportConfig.scale));
-
-        if (exportConfig.format === 'webm') {
-            if (w % 2 !== 0) w++;
-            if (h % 2 !== 0) h++;
-        }
-
-        const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
-        const ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
-
-        if (fillBgColor) {
-            ctx.fillStyle = fillBgColor;
-            ctx.fillRect(0, 0, w, h);
-        } else {
-            ctx.clearRect(0, 0, w, h);
-        }
-
-        const processedChromaCanvas = getProcessedCanvas(baseIndex);
-        const { opacity, filterString, rotate, translateX, translateY, scale } = getFinalRenderFilters(frames, floatIndex);
-        
-        if (opacity > 0.005) {
-            ctx.save();
-            ctx.globalAlpha = opacity; ctx.filter = filterString;
-            ctx.scale(exportConfig.scale, exportConfig.scale);
-            ctx.translate(orgW/2 + translateX, orgH/2 + translateY); 
-            ctx.rotate((rotate * Math.PI) / 180); 
-            ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
-            ctx.translate(-orgW/2, -orgH/2);
-            ctx.drawImage(processedChromaCanvas, 0, 0);
-            ctx.restore();
-        }
-        
-        return { canvas: tempCanvas, ctx, w, h }; 
-      };
+        animationId = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(animationId);
+      }, [isPlaying, frames, speed, isLooping]);
 
       const handleConfirmExport = async () => {
-        setIsExporting(true);
+        setIsLoading(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            if (exportConfig.format === 'json') {
-                const outJsonData = {
-                    metadata: {
-                        version: "2.0",
-                        format: "Motion Image Editor Export",
-                        frameCount: frames.length,
-                        totalDuration: frames.reduce((sum, f) => sum + f.delay, 0)
-                    },
-                    globals: {
-                        opacity: globalOpacity, hue: globalHue, saturation: globalSaturation, 
-                        brightness: globalBrightness, contrast: globalContrast, invert: globalInvert,
-                        flipX: globalFlipX, flipY: globalFlipY, speed: speed, bgRemoval
-                    },
-                    frames: frames.map((f, i) => ({
-                        index: i,
-                        delay: f.delay,
-                        filters: f.customFilters,
-                        keyframes: f.keyframes,
-                        easings: f.easings,
-                        image: f.canvas.toDataURL('image/png')
-                    }))
-                };
-                const blob = new Blob([JSON.stringify(outJsonData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${originalFileName}_project.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                setIsExportModalOpen(false);
-                setIsExporting(false);
-                return;
+            let imgs = [], delays = [], exportW = frames[0].canvas.width, exportH = frames[0].canvas.height;
+            for (let i = 0; i < frames.length; i++) {
+                const canvas = document.createElement('canvas'); canvas.width = exportW; canvas.height = exportH;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(frames[i].canvas, 0, 0);
+                imgs.push(ctx.getImageData(0,0,exportW,exportH).data.buffer);
+                delays.push(frames[i].delay);
             }
-
-            const exportPoints = [];
-            let totalDuration = frames.reduce((sum, f) => sum + f.delay, 0);
-            if (totalDuration === 0) totalDuration = 1000;
-
-            // ✅ 修復：確保自訂影格縮放時，必定精準鎖定頭尾兩端的原始影格，保證漸變到達 0% 絕對終點
-            if (exportConfig.frameMode === 'original' || frames.length <= 1) {
-                frames.forEach((f, idx) => {
-                    exportPoints.push({ baseIndex: idx, floatIndex: idx, delay: f.delay / speed });
-                });
-            } else {
-                const N = Math.max(2, exportConfig.customFrameCount);
-                const realDuration = totalDuration / speed;
-                const dt = realDuration / N; 
-                
-                for (let i = 0; i < N; i++) {
-                    // 首幀強制作為起點
-                    if (i === 0) {
-                        exportPoints.push({ baseIndex: 0, floatIndex: 0, delay: dt });
-                        continue;
-                    }
-                    // 末幀強制作為終點
-                    if (i === N - 1) {
-                        exportPoints.push({ baseIndex: frames.length - 1, floatIndex: frames.length - 1, delay: dt });
-                        continue;
-                    }
-
-                    const p = i / (N - 1); 
-                    let targetTime = p * totalDuration;
-                    
-                    let acc = 0;
-                    let baseIdx = frames.length - 1;
-                    let floatIdx = frames.length - 1;
-                    
-                    for (let j = 0; j < frames.length; j++) {
-                        const fDelay = Math.max(1, frames[j].delay);
-                        if (targetTime >= acc && targetTime < acc + fDelay) {
-                            baseIdx = j;
-                            floatIdx = j + (targetTime - acc) / fDelay;
-                            break;
-                        }
-                        acc += fDelay;
-                    }
-                    floatIdx = Math.max(0, Math.min(frames.length - 1, floatIdx));
-                    exportPoints.push({ baseIndex: baseIdx, floatIndex: floatIdx, delay: dt });
-                }
-            }
-
-            let gifencModule;
-            if (exportConfig.format === 'gif') {
-                gifencModule = await import('https://esm.sh/gifenc@1.0.3');
-            }
-
-            const imgs = [];
-            const delays = [];
-            let exportW = 0, exportH = 0;
-
-            let gif;
-            let webmMuxer = null;
-            let webmEncoder = null;
-            let currentTimeWebM = 0;
-
-            if (exportConfig.format === 'gif') gif = gifencModule.GIFEncoder();
-            
-            const zipData = {};
-            const isJpeg = exportConfig.format === 'zip-jpg';
-            const isWebp = exportConfig.format === 'zip-webp';
-            const needsFillBg = exportConfig.format === 'gif' || isJpeg || exportConfig.format === 'webm';
-
-            for (let i = 0; i < exportPoints.length; i++) {
-                const pt = exportPoints[i];
-                const { ctx, w, h, canvas } = getExportCanvasForFrame(pt.baseIndex, pt.floatIndex, needsFillBg ? exportConfig.bgColor : null);
-                if (i === 0) { 
-                    exportW = w; 
-                    exportH = h; 
-                    
-                    if (exportConfig.format === 'webm') {
-                        if (!Muxer || typeof VideoEncoder === 'undefined') {
-                            throw new Error("您的瀏覽器不支援 WebM 影像編碼 (WebCodecs API)");
-                        }
-                        webmMuxer = new Muxer({
-                            target: new ArrayBufferTarget(),
-                            video: { codec: 'V_VP8', width: exportW, height: exportH }
-                        });
-                        webmEncoder = new VideoEncoder({
-                            output: (chunk, meta) => webmMuxer.addVideoChunk(chunk, meta),
-                            error: (e) => { console.error("WebM Encoder 錯誤:", e); throw e; }
-                        });
-                        webmEncoder.configure({
-                            codec: 'vp8',
-                            width: exportW,
-                            height: exportH,
-                            bitrate: 5_000_000
-                        });
-                    }
-                }
-
-                if (exportConfig.format === 'apng') {
-                    // 恢復最純粹的 ImageData 截取，將殘影清除交給稍後的二進位精確控制 (fcTL Patch)
-                    const imgData = ctx.getImageData(0, 0, exportW, exportH);
-                    imgs.push(imgData.data.buffer);
-                    delays.push(pt.delay);
-                } else if (exportConfig.format === 'webm') {
-                    const frame = new VideoFrame(canvas, { timestamp: currentTimeWebM * 1000 });
-                    currentTimeWebM += pt.delay;
-                    webmEncoder.encode(frame, { keyFrame: i % 30 === 0 });
-                    frame.close();
-                    
-                    while (webmEncoder.encodeQueueSize > 5) {
-                        await new Promise(r => setTimeout(r, 10));
-                    }
-                } else if (exportConfig.format === 'gif') {
-                    const imgData = ctx.getImageData(0, 0, exportW, exportH);
-                    const cnum = exportConfig.compression === 0 ? 256 : exportConfig.compression;
-                    const palette = gifencModule.quantize(imgData.data, cnum);
-                    const index = gifencModule.applyPalette(imgData.data, palette);
-                    gif.writeFrame(index, exportW, exportH, { palette, delay: pt.delay });
-                } else {
-                    const mimeType = isJpeg ? 'image/jpeg' : (isWebp ? 'image/webp' : 'image/png');
-                    const ext = isJpeg ? 'jpg' : (isWebp ? 'webp' : 'png');
-                    const quality = isJpeg ? 0.9 : 0.85;
-                    const buffer = await new Promise(resolve => {
-                        canvas.toBlob(blob => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(new Uint8Array(reader.result));
-                            reader.readAsArrayBuffer(blob);
-                        }, mimeType, quality);
-                    });
-                    const idxStr = String(i + 1).padStart(4, '0');
-                    zipData[`frame_${idxStr}.${ext}`] = buffer;
-                }
-            }
-
-            let blob;
-            let filenameExt;
-            
-            // CRC32 計算函數
-            const crcTable = new Uint32Array(256);
-            for (let i = 0; i < 256; i++) {
-               let c = i;
-               for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-               crcTable[i] = c;
-            }
-            const crc32 = (buf, off, len) => {
-               let crc = 0 ^ (-1);
-               for (let i = 0; i < len; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[off + i]) & 0xFF];
-               return (crc ^ (-1)) >>> 0;
-            };
-
-            if (exportConfig.format === 'apng') {
-                let cnum = parseInt(exportConfig.compression) || 0;
-                let apngBuffer = UPNG.encode(imgs, exportW, exportH, cnum, delays);
-                
-                // ✅ 精準背景清除追蹤 (Smart Dispose Tracking)：100%解決透明度殘影，且無損降色壓縮
-                const view = new DataView(apngBuffer);
-                const uint8 = new Uint8Array(apngBuffer);
-                const length = view.byteLength;
-                let offset = 8;
-                
-                const fcTL_Offsets = [];
-                let acTL_Offset = -1;
-
-                // 1. 蒐集區塊位置
-                while (offset < length) {
-                    const chunkLen = view.getUint32(offset);
-                    const chunkType = String.fromCharCode(uint8[offset+4], uint8[offset+5], uint8[offset+6], uint8[offset+7]);
-                    
-                    if (chunkType === 'acTL') acTL_Offset = offset;
-                    else if (chunkType === 'fcTL') fcTL_Offsets.push(offset);
-                    
-                    offset += 8 + chunkLen + 4;
-                }
-
-                // 2. 修復不循環選項
-                if (!isLooping && acTL_Offset !== -1) {
-                    view.setUint32(acTL_Offset + 12, 1);
-                    const len = view.getUint32(acTL_Offset);
-                    view.setUint32(acTL_Offset + 8 + len, crc32(uint8, acTL_Offset + 4, len + 4));
-                }
-
-                // 3. 精準套用 SOURCE 覆寫與 BACKGROUND 實體背景清除
-                const modifiedFcTLs = new Set();
-                
-                for (let i = 0; i < fcTL_Offsets.length; i++) {
-                    const pt = exportPoints[i];
-                    if (!pt) continue;
-                    
-                    const filters = getFinalRenderFilters(frames, pt.floatIndex);
-                    const isTransparent = filters.opacity <= 0.005;
-
-                    if (isTransparent) {
-                        const curOff = fcTL_Offsets[i];
-                        view.setUint8(curOff + 33, 0); // 將完全透明格設為直接覆蓋 (SOURCE Blend)
-                        modifiedFcTLs.add(i);
-
-                        if (i > 0) {
-                            const prevPt = exportPoints[i - 1];
-                            const prevFilters = getFinalRenderFilters(frames, prevPt.floatIndex);
-                            // 若「前一張可見，但這一張透明」，我們就對前一格下達強制背景清除指令！
-                            if (prevFilters.opacity > 0.005) {
-                                const prevOff = fcTL_Offsets[i - 1];
-                                view.setUint8(prevOff + 32, 1); // 對前一格設定清除背景 (BACKGROUND Dispose)
-                                modifiedFcTLs.add(i - 1);
-                            }
-                        }
-                    }
-                }
-
-                // 4. 重算並更新修改過的 Chunk CRC
-                modifiedFcTLs.forEach(i => {
-                    const off = fcTL_Offsets[i];
-                    const len = view.getUint32(off);
-                    view.setUint32(off + 8 + len, crc32(uint8, off + 4, len + 4));
-                });
-
-                blob = new Blob([apngBuffer], { type: 'image/apng' });
-                filenameExt = 'apng.png';
-            } else if (exportConfig.format === 'webm') {
-                await webmEncoder.flush();
-                webmMuxer.finalize();
-                blob = new Blob([webmMuxer.target.buffer], { type: 'video/webm' });
-                filenameExt = 'webm';
-            } else if (exportConfig.format === 'gif') {
-                gif.finish();
-                blob = new Blob([gif.bytesView()], { type: 'image/gif' });
-                filenameExt = 'gif';
-            } else {
-                const zipped = fflate.zipSync(zipData);
-                blob = new Blob([zipped], { type: 'application/zip' });
-                filenameExt = 'frames.zip';
-            }
-
+            let apngBuffer = UPNG.encode(imgs, exportW, exportH, 0, delays);
+            const blob = new Blob([apngBuffer], { type: 'image/apng' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${originalFileName}_output.${filenameExt}`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const a = document.createElement('a'); a.href = url; a.download = `${originalFileName}_output.png`; a.click();
             setIsExportModalOpen(false);
-            
-        } catch (e) { 
-            console.error(e);
-            setError(t('exportFailed')); 
-        } finally { 
-            setIsExporting(false); 
-        }
+        } catch (e) {
+            setError("導出錯誤。");
+        } finally { setIsLoading(false); }
       };
 
-      const isJsonSelected = exportConfig.format === 'json';
-
-      return (
-        <div 
-          className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans overflow-hidden select-none relative transition-colors duration-300"
-          onDragOver={(e) => { 
-            e.preventDefault(); 
-            if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
-              setIsDragOver(true); 
-            }
-          }}
-          onDragLeave={(e) => { 
-            e.preventDefault(); 
-            if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false);
-          }}
-          onDrop={(e) => { 
-            e.preventDefault(); 
-            setIsDragOver(false);
-            if (!isAppReady) return;
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-              const file = e.dataTransfer.files[0];
-              handleFileDropOrSelect(file, frames.length > 0);
-            }
-          }}
-        >
-          {/* 全域拖曳換圖覆蓋層 */}
-          {isDragOver && (
-            <div className="absolute inset-0 bg-purple-600/20 backdrop-blur-sm z-[100] flex items-center justify-center border-[6px] border-purple-500 border-dashed pointer-events-none transition-all duration-300">
-              <div className="bg-white dark:bg-slate-800 px-12 py-10 rounded-3xl shadow-2xl flex flex-col items-center gap-4 transform scale-105">
-                <ImagePlus className="w-20 h-20 text-purple-600 dark:text-purple-400 animate-bounce" />
-                <span className="text-purple-700 dark:text-purple-300 font-black text-3xl tracking-wide">{frames.length > 0 ? t('replace') : t('importBtn')}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Export Modal */}
-          {isExportModalOpen && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-[420px] w-full overflow-hidden flex flex-col animate-fade-in">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2"><FileOutput className="w-5 h-5 text-blue-500"/> {t('exportSettingsTitle')}</h3>
-                  <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X className="w-5 h-5"/></button>
-                </div>
-                
-                <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
-                  {/* Format */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('format')}</label>
-                    <select value={exportConfig.format} onChange={e => setExportConfig({...exportConfig, format: e.target.value})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
-                      <option value="webm">{t('fmtWebm')}</option>
-                      <option value="apng">{t('fmtApng')}</option>
-                      <option value="gif">{t('fmtGif')}</option>
-                      <option value="json">{t('fmtJson')}</option>
-                      <option value="zip-png">{t('fmtZipPng')}</option>
-                      <option value="zip-jpg">{t('fmtZipJpg')}</option>
-                      <option value="zip-webp">{t('fmtZipWebp')}</option>
-                    </select>
-                  </div>
-                  
-                  {/* Compression */}
-                  {['apng', 'gif'].includes(exportConfig.format) && (
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('colors')}</label>
-                      <select value={exportConfig.compression} onChange={e => setExportConfig({...exportConfig, compression: parseInt(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
-                        <option value={0}>{t('compLossless')}</option>
-                        <option value={256}>{t('comp256')}</option>
-                        <option value={128}>{t('comp128')}</option>
-                        <option value={64}>{t('comp64')}</option>
-                        <option value={32}>{t('comp32')}</option>
-                        <option value={16}>{t('comp16')}</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* BG Color (Visible for GIF / JPEG / WebM) */}
-                  {['gif', 'zip-jpg', 'webm'].includes(exportConfig.format) && (
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('bgColor')}</label>
-                      <div className="flex items-center gap-3">
-                        <input type="color" value={exportConfig.bgColor} onChange={e => setExportConfig({...exportConfig, bgColor: e.target.value})} className="w-10 h-10 rounded border-0 p-0 cursor-pointer" />
-                        <span className="text-sm font-mono text-slate-600 dark:text-slate-300">{exportConfig.bgColor.toUpperCase()}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Scale */}
-                  {!isJsonSelected && (
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block">{t('outScale')}</label>
-                      <select value={exportConfig.scale} onChange={e => setExportConfig({...exportConfig, scale: parseFloat(e.target.value)})} className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium">
-                        <option value={1.0}>{t('size100')}</option>
-                        <option value={0.75}>{t('size75')}</option>
-                        <option value={0.5}>{t('size50')}</option>
-                        <option value={0.25}>{t('size25')}</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Frame Count */}
-                  {frames.length > 1 && !isJsonSelected && (
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block">{t('outFrames')}</label>
-                      <div className="flex flex-col gap-3">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                          <input type="radio" name="fmode" checked={exportConfig.frameMode === 'original'} onChange={() => setExportConfig({...exportConfig, frameMode: 'original'})} className="w-4 h-4 text-blue-600" />
-                          <span className="text-slate-700 dark:text-slate-200">{t('origFrames')} ({frames.length})</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                          <input type="radio" name="fmode" checked={exportConfig.frameMode === 'custom'} onChange={() => setExportConfig({...exportConfig, frameMode: 'custom'})} className="w-4 h-4 text-blue-600" />
-                          <span className="text-slate-700 dark:text-slate-200">{t('customFrames')}</span>
-                        </label>
-                        {exportConfig.frameMode === 'custom' && (
-                          <div className="pl-8 flex items-center gap-2">
-                            <input type="number" min="2" max="500" value={exportConfig.customFrameCount} onChange={e => setExportConfig({...exportConfig, customFrameCount: parseInt(e.target.value) || 2})} className="w-20 p-1.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded text-sm text-center" />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{t('framesUnit')}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Size Estimation */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 flex justify-between items-center">
-                     <span className="text-xs font-bold text-blue-800 dark:text-blue-300">{t('estSize')}</span>
-                     <span className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400">{formatBytes(getEstimatedSize())}</span>
-                  </div>
-                </div>
-                
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-3">
-                  <button onClick={() => setIsExportModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                    {t('cancel')}
-                  </button>
-                  <button onClick={handleConfirmExport} disabled={isExporting} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md">
-                    {isExporting ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></span> : <Download className="w-4 h-4"/>}
-                    {isExporting ? t('exporting') : t('confirmExport')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Header */}
-          <header className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0 shadow-sm z-10 transition-colors">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                <ImageIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />{t('title')}
-              </h1>
-              {/* 快速鍵與作者提示 */}
-              <div className="hidden md:flex group relative items-center justify-center bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded cursor-help">
-                <a href="https://x.com/vm060460" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors mr-2 border-r border-slate-300 dark:border-slate-600 pr-2">
-                  {t('author')}
-                </a>
-                <Keyboard className="w-4 h-4 text-slate-400 hover:text-blue-500" />
-                <div className="absolute left-0 top-full mt-2 w-64 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-lg p-4 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  <p className="font-bold mb-2 border-b border-slate-600 pb-1">{t('shortcuts')}</p>
-                  <ul className="space-y-2 text-slate-300">
-                    <li className="flex justify-between"><span><kbd className="bg-slate-900 px-1 rounded">Space</kbd></span> <span>{t('playPause')}</span></li>
-                    <li className="flex justify-between"><span><kbd className="bg-slate-900 px-1 rounded">←</kbd> / <kbd className="bg-slate-900 px-1 rounded">→</kbd></span> <span>{t('prevNext')}</span></li>
-                    <li className="flex justify-between"><span><kbd className="bg-slate-900 px-1 rounded">Del</kbd></span> <span>{t('delKey')}</span></li>
-                    <li className="flex justify-between"><span><kbd className="bg-slate-900 px-1 rounded">Ctrl+Z</kbd></span> <span>{t('undo')}</span></li>
-                    <li className="flex justify-between"><span><kbd className="bg-slate-900 px-1 rounded">Ctrl+Y</kbd></span> <span>{t('redo')}</span></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 border border-slate-200 dark:border-slate-700">
-                 <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="p-1 rounded text-slate-500 hover:text-amber-500 dark:hover:text-amber-400">
-                    {theme === 'light' ? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>}
-                 </button>
-                 <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></div>
-                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-xs text-slate-600 dark:text-slate-300 outline-none font-bold cursor-pointer">
-                    <option value="zh-TW">繁體中文</option>
-                    <option value="en">English</option>
-                    <option value="ja">日本語</option>
-                    <option value="ko">한국어</option>
-                 </select>
-              </div>
-
-              {frames.length > 0 && (
-                <div className="flex items-center gap-2">
-                  {!isCropMode && (
-                    <div className="flex gap-2">
-                      <button onClick={() => {setIsGridView(!isGridView); setIsPlaying(false);}} className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${isGridView ? 'bg-indigo-600 text-white shadow-inner' : 'bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 text-indigo-700 dark:text-indigo-300'}`}>
-                        <LayoutGrid className="w-4 h-4"/> {isGridView ? t('canvasView') : t('gridView')}
-                      </button>
-                      {!isGridView && (
-                        <>
-                          <button onClick={() => document.getElementById('replace-upload').click()} className="flex items-center gap-1 text-sm bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-md font-medium transition-colors">
-                            <ImagePlus className="w-4 h-4"/> {t('replace')}
-                          </button>
-                          <button onClick={() => { setIsCropMode(true); setIsPlaying(false); setCropRect({x:0, y:0, w:frames[0].canvas.width, h:frames[0].canvas.height}); }} className="flex items-center gap-1 text-sm bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-md font-medium transition-colors">
-                            <Crop className="w-4 h-4"/> {t('cropExpand')}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 border-x border-slate-200 dark:border-slate-700 px-3 mx-1">
-                    <button onClick={undo} disabled={historyPointer <= 0} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors disabled:opacity-30"><Undo2 className="w-4 h-4" /></button>
-                    <button onClick={redo} disabled={historyPointer >= history.length - 1} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors disabled:opacity-30"><Redo2 className="w-4 h-4" /></button>
-                  </div>
-                  <button onClick={() => { setFrames([]); setIsPlaying(false); setActiveTab('global'); setHistory([]); setHistoryPointer(-1); setIsGridView(false); chromaCache.current = {bgStateStr:'', canvases:[], originals:[]}; }} className="text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20">{t('clear')}</button>
-                </div>
-              )}
-            </div>
-          </header>
-
-          <main className="flex-1 flex overflow-hidden flex-col md:flex-row relative">
-            {(isLoading || isExporting || !isAppReady) && (
-              <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="mt-4 text-blue-700 font-bold text-lg shadow-white drop-shadow-md">{t('exporting')}</p>
-              </div>
-            )}
-
-            {/* 左側：主要畫布或網格視圖 */}
-            <div className="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-800/50 relative">
-              
-              {isGridView ? (
-                <div className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-900 overflow-hidden">
-                  {/* 網格管理工具列 */}
-                  <div className="bg-white dark:bg-slate-800 px-6 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between shadow-sm z-10 gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('selected')} {selectedFrames.length} / {frames.length} {t('frames')}</span>
-                      <button onClick={() => setSelectedFrames(frames.map((_,i)=>i))} className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600">{t('selectAll')}</button>
-                      <button onClick={() => setSelectedFrames([])} className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600">{t('deselect')}</button>
-                      <div className="border-l border-slate-200 dark:border-slate-600 h-4 mx-1"></div>
-                      <button onClick={handleDuplicateSelected} disabled={selectedFrames.length===0} className="text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded disabled:opacity-50 flex items-center"><Copy className="w-3 h-3 mr-1"/> {t('copySelected')}</button>
-                      <button onClick={handleDeleteSelectedFrames} disabled={selectedFrames.length===0} className="text-xs bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-1 rounded disabled:opacity-50 flex items-center"><X className="w-3 h-3 mr-1"/> {t('delSelected')}</button>
-                      <div className="border-l border-slate-200 dark:border-slate-600 h-4 mx-1"></div>
-                      <button onClick={handleReverseFrames} className="text-xs bg-orange-50 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 px-2 py-1 rounded flex items-center font-bold"><ArrowLeftRight className="w-3 h-3 mr-1"/> {t('reverseAll')}</button>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      {/* 加入時間長度區塊 */}
-                      <div className="flex items-center gap-2 border-l pl-4 border-slate-200 dark:border-slate-700">
-                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('addTimeLen')}:</span>
-                         <input type="number" value={addSecondsInput} onChange={(e)=>setAddSecondsInput(Number(e.target.value))} min="0.1" step="0.1" className="w-14 border dark:border-slate-600 dark:bg-slate-700 rounded px-1 py-0.5 text-sm" />
-                         <span className="text-xs text-slate-500">s</span>
-                         <select value={addPosition} onChange={(e)=>setAddPosition(e.target.value)} className="text-xs border dark:border-slate-600 dark:bg-slate-700 rounded px-1 py-1">
-                           <option value="start">{t('addStart')}</option>
-                           <option value="end">{t('addEnd')}</option>
-                         </select>
-                         <button onClick={handleAddFramesByTime} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 px-2 py-1 rounded hover:bg-purple-200 shadow-sm">{t('insertFrames')}</button>
-                      </div>
-
-                      <div className="flex items-center gap-2 border-l pl-4 border-slate-200 dark:border-slate-700">
-                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('selectedDelay')}:</span>
-                         <input type="number" value={batchDelayInput} onChange={(e)=>setBatchDelayInput(Number(e.target.value))} className="w-14 border dark:border-slate-600 dark:bg-slate-700 rounded px-1 py-0.5 text-sm" />
-                         <span className="text-xs text-slate-500">ms</span>
-                         <button onClick={()=>applyBatchDelay(batchDelayInput, false)} disabled={selectedFrames.length===0} className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded disabled:opacity-50">{t('set')}</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 網格區塊 */}
-                  <div className="flex-1 overflow-y-auto p-6 checkered-bg-light dark:checkered-bg-dark">
-                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 auto-rows-max">
-                      {frames.map((f, i) => {
-                        const isSelected = selectedFrames.includes(i);
-                        return (
-                           <div 
-                              key={`grid-${i}-${f.delay}`}
-                              className={`relative aspect-square bg-white dark:bg-slate-800 border-2 rounded-lg p-1 flex flex-col items-center justify-between cursor-grab transition-all shadow-sm
-                                ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-300 ring-offset-1 dark:ring-offset-slate-900 scale-105' : 'border-slate-300 dark:border-slate-600 hover:border-blue-300'}
-                              `}
-                              draggable
-                              onClick={(e) => handleGridFrameClick(e, i)}
-                              onDragStart={(e) => {
-                                 if (!selectedFrames.includes(i)) setSelectedFrames([i]);
-                                 e.dataTransfer.effectAllowed = "move";
-                              }}
-                              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
-                              onDrop={(e) => handleGridDrop(e, i)}
-                           >
-                              <span className="absolute top-1 left-1.5 text-[9px] font-mono font-bold text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1 rounded">{i}</span>
-                              <div className="w-full h-full flex items-center justify-center p-1 mt-2 pointer-events-none">
-                                 {/* ✅ 即時預覽渲染 */}
-                                 <FrameThumbnail 
-                                    sourceCanvas={getProcessedCanvas(i)}
-                                    filters={getFinalRenderFilters(frames, i)}
-                                    globalFlipX={globalFlipX}
-                                    globalFlipY={globalFlipY}
-                                 />
-                              </div>
-                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1 pointer-events-none">{f.delay}ms</span>
-                           </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className={`flex-1 relative flex items-center justify-center p-4 md:p-8 checkered-bg-light dark:checkered-bg-dark overflow-hidden`}>
-                  {error && (<div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 shadow-md z-40 border border-red-200 text-sm"><AlertCircle className="w-5 h-5" /> {error}</div>)}
-
-                  {frames.length > 0 ? (
-                    <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-                      {/* 精準對位容器 */}
-                      <div className="relative pointer-events-auto shadow-2xl" style={{ 
-                          aspectRatio: `${frames[0].canvas.width} / ${frames[0].canvas.height}`, 
-                          maxWidth: '100%', 
-                          maxHeight: '100%' 
-                        }}>
-                        <canvas ref={canvasRef} className="w-full h-full object-contain" />
-                        
-                        {/* 裁切覆蓋層 */}
-                        {isCropMode && (
-                          <div 
-                            ref={overlayRef}
-                            className="absolute inset-0 z-30 cursor-crosshair pointer-events-auto"
-                            onMouseDown={handleCropMouseDown}
-                          >
-                            <div className="absolute bg-blue-500/20 border-2 border-blue-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]" 
-                                 style={{
-                                   left: `${(cropRect.x / frames[0].canvas.width) * 100}%`, 
-                                   top: `${(cropRect.y / frames[0].canvas.height) * 100}%`, 
-                                   width: `${(cropRect.w / frames[0].canvas.width) * 100}%`, 
-                                   height: `${(cropRect.h / frames[0].canvas.height) * 100}%`
-                                 }}
-                            >
-                              <div className="absolute -top-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -top-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white border border-blue-600"></div><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-blue-600"></div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={`border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-3xl p-8 md:p-16 text-center bg-white/60 dark:bg-slate-800/60 shadow-sm w-full max-w-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all`} onClick={() => isAppReady && document.getElementById('file-upload').click()}>
-                      <div className="bg-blue-100 dark:bg-blue-900/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"><Upload className="w-8 h-8 text-blue-600 dark:text-blue-400" /></div>
-                      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">{t('importBtn')}</h2>
-                      <p className="text-slate-500 dark:text-slate-400">{t('dragDrop')}</p>
-                    </div>
-                  )}
-
-                  {/* 裁切/擴展控制面板 */}
-                  {isCropMode && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-2xl z-40 border border-slate-200 dark:border-slate-700 flex items-center gap-4">
-                      <div className="flex gap-2">
-                        <div className="flex flex-col"><label className="text-[10px] text-slate-500 dark:text-slate-400">X</label><input type="number" value={Math.round(cropRect.x)} onChange={(e)=>setCropRect({...cropRect, x: Number(e.target.value)})} className="w-16 border dark:border-slate-600 dark:bg-slate-700 rounded p-1 text-sm"/></div>
-                        <div className="flex flex-col"><label className="text-[10px] text-slate-500 dark:text-slate-400">Y</label><input type="number" value={Math.round(cropRect.y)} onChange={(e)=>setCropRect({...cropRect, y: Number(e.target.value)})} className="w-16 border dark:border-slate-600 dark:bg-slate-700 rounded p-1 text-sm"/></div>
-                        <div className="flex flex-col"><label className="text-[10px] text-slate-500 dark:text-slate-400">W</label><input type="number" value={Math.round(cropRect.w)} onChange={(e)=>setCropRect({...cropRect, w: Number(e.target.value)})} className="w-16 border dark:border-slate-600 dark:bg-slate-700 rounded p-1 text-sm"/></div>
-                        <div className="flex flex-col"><label className="text-[10px] text-slate-500 dark:text-slate-400">H</label><input type="number" value={Math.round(cropRect.h)} onChange={(e)=>setCropRect({...cropRect, h: Number(e.target.value)})} className="w-16 border dark:border-slate-600 dark:bg-slate-700 rounded p-1 text-sm"/></div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-1 border-l dark:border-slate-700 pl-4 justify-center items-center">
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1">{t('alignMode')}</span>
-                        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
-                          <button onClick={() => alignCropRect('left')} className="p-1 hover:bg-white dark:hover:bg-slate-600 rounded hover:text-blue-600"><AlignLeft className="w-4 h-4"/></button>
-                          <button onClick={() => alignCropRect('center')} className="p-1 hover:bg-white dark:hover:bg-slate-600 rounded hover:text-blue-600"><AlignCenter className="w-4 h-4"/></button>
-                          <button onClick={() => alignCropRect('right')} className="p-1 hover:bg-white dark:hover:bg-slate-600 rounded hover:text-blue-600"><AlignRight className="w-4 h-4"/></button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-1 border-l dark:border-slate-700 pl-4">
-                        <button onClick={applyCropAndResize} className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">{t('applyCrop')}</button>
-                        <button onClick={()=>setIsCropMode(false)} className="px-4 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs hover:bg-slate-200 dark:hover:bg-slate-600">{t('cancel')}</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ===== 多軌道 AE Style 關鍵影格時間軸 ===== */}
-              {frames.length > 1 && !isCropMode && !isGridView && (
-                <div className="h-[250px] bg-[#f8f9fa] dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 flex flex-col shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] z-20 select-none relative overflow-hidden">
-                  
-                  {/* 時間軸工具列 (裁切) */}
-                  <div className="h-8 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 shrink-0">
-                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1"><Scissors className="w-3 h-3"/> {t('timelineTools')}</span>
-                     <div className="flex gap-2">
-                       <button onClick={handleTrimStart} disabled={currentFrameIndex === 0} className="text-[11px] px-2 py-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 disabled:opacity-50 transition-colors">{t('trimStart')}</button>
-                       <button onClick={handleTrimEnd} disabled={currentFrameIndex === frames.length - 1} className="text-[11px] px-2 py-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 disabled:opacity-50 transition-colors">{t('trimEnd')}</button>
-                     </div>
-                  </div>
-
-                  {/* 捲動區域 */}
-                  <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
-                      {/* 上方：影格數字標尺 */}
-                      <div className="h-6 border-b border-slate-200 dark:border-slate-700 flex relative overflow-hidden px-12 bg-white dark:bg-slate-800 sticky top-0 z-30 shrink-0">
-                        {Array.from({ length: Math.ceil(frames.length / 10) + 1 }).map((_, i) => {
-                          const frameNum = i * 10;
-                          if (frameNum >= frames.length) return null;
-                          return (
-                            <div key={i} className="absolute top-0 bottom-0 border-l border-slate-300 dark:border-slate-600 flex items-end pb-0.5" style={{ left: `calc(3rem + (100% - 6rem) * ${(frameNum / (frames.length - 1))})` }}>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono ml-1 leading-none">{frameNum}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-
-                      {/* 下方：多軌道區塊 */}
-                      <div className="flex-1 relative px-12 py-3 flex flex-col gap-1.5" ref={timelineTrackRef} onMouseDown={handleTimelineMouseDown}>
-                        
-                        {/* 紅色播放指標 */}
-                        <div className="absolute top-0 bottom-0 w-px bg-red-500 z-40 pointer-events-none" style={{ left: `calc(3rem + (100% - 6rem) * ${(currentFrameIndex / Math.max(1, frames.length - 1))})` }}>
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] border-t-red-500"></div>
-                        </div>
-
-                        {/* 內部相對容器 */}
-                        <div className="relative w-full h-full flex flex-col gap-1.5">
-                            {/* 影格預覽軌道 */}
-                            <div className="relative h-10 bg-slate-300/30 dark:bg-slate-700/30 rounded-sm border border-slate-300 dark:border-slate-600 flex items-center mb-2">
-                              <span className="absolute -left-10 text-[9px] text-slate-500 dark:text-slate-400 font-bold z-20">{t('trackFrame')}</span>
-                              {frames.map((frame, idx) => {
-                                const isSelected = currentFrameIndex === idx;
-                                return (
-                                  <div 
-                                    key={`${idx}-${frame.delay}`} 
-                                    className={`absolute top-0 bottom-0 flex items-center justify-center transition-all group cursor-pointer ${isSelected ? 'border-2 border-blue-500 bg-blue-500/20 z-10 scale-110 shadow-md' : 'opacity-80 hover:opacity-100'}`}
-                                    style={{ left: `${(idx / (frames.length - 1)) * 100}%`, width: '28px', transform: 'translateX(-50%)' }}
-                                    onMouseDown={(e) => { 
-                                      e.stopPropagation(); setCurrentFrameIndex(idx); setIsPlaying(false); setActiveTab('edit'); 
-                                    }}
-                                  >
-                                    {/* ✅ 即時預覽渲染 */}
-                                    <FrameThumbnail 
-                                       sourceCanvas={getProcessedCanvas(idx)}
-                                       filters={getFinalRenderFilters(frames, idx)}
-                                       globalFlipX={globalFlipX}
-                                       globalFlipY={globalFlipY}
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* 特效軌道 */}
-                            {TRACKS_INFO.map(track => {
-                              const hasKeyframes = frames.some(f => f.keyframes[track.id]);
-                              if (!hasKeyframes) return null; 
-
-                              return (
-                                <div key={track.id} className="relative h-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-sm border border-slate-300 dark:border-slate-700 flex items-center animate-fade-in">
-                                  <span className="absolute -left-10 text-[9px] text-slate-500 dark:text-slate-400 font-bold">{t(track.labelKey)}</span>
-                                  
-                                  {/* 繪製視覺化貝茲曲線 */}
-                                  {renderTimelineCurves(track.id, track.stroke)}
-
-                                  {frames.map((frame, idx) => {
-                                    if (!frame.keyframes[track.id]) return null;
-                                    const isKeyframeSelected = selectedKeyframe?.idx === idx && selectedKeyframe?.trackId === track.id;
-                                    const isDraggingThis = draggingKeyframe?.fromIdx === idx && draggingKeyframe?.trackId === track.id;
-                                    const renderIdx = isDraggingThis ? draggingKeyframe.currentIdx : idx;
-                                    
-                                    return (
-                                      <div 
-                                        key={idx} 
-                                        className={`absolute top-1/2 -mt-1.5 w-3 h-3 rotate-45 cursor-grab active:cursor-grabbing hover:scale-125 transition-all z-10 
-                                          ${isDraggingThis ? 'bg-blue-500 border border-blue-700 shadow-[0_0_10px_rgba(59,130,246,0.8)] scale-150 z-50' : 
-                                           isKeyframeSelected ? 'bg-red-500 border border-red-700 shadow-[0_0_8px_rgba(239,68,68,0.8)] scale-125' : 
-                                           `${track.color} border ${track.border} shadow-sm`}`}
-                                        style={{ 
-                                           left: `${(renderIdx / Math.max(1, frames.length - 1)) * 100}%`, 
-                                           transform: 'translateX(-50%) translateY(-50%) rotate(45deg)',
-                                           transitionDuration: isDraggingThis ? '0s' : '0.15s'
-                                        }}
-                                        onMouseDown={(e) => {
-                                           setCurrentFrameIndex(idx); setIsPlaying(false); setActiveTab('edit');
-                                           setSelectedKeyframe({ idx, trackId: track.id });
-                                           handleKeyframeDrag(e, idx, track.id);
-                                        }}
-                                        title={`第 ${renderIdx} 格 ${track.label}特效 (Delete可刪除)`}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              )
-                            })}
-                        </div>
-                        
-                        {!TRACKS_INFO.some(t => frames.some(f => f.keyframes[t.id])) && (
-                          <div className="w-full text-center text-[10px] text-slate-400 mt-2 font-medium">
-                             {t('noKfs')}
-                          </div>
-                        )}
-                      </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 右側：控制面板 */}
-            {frames.length > 0 && !isCropMode && !isGridView && (
-              <div className="w-full md:w-[380px] bg-white dark:bg-slate-800 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 flex flex-col shrink-0 h-1/2 md:h-full z-10 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] transition-colors">
-                
-                {frames.length > 1 && (
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1">{t('globalCtrl')}</h2>
-                      <label className="flex items-center gap-1.5 cursor-pointer group">
-                        <div className={`relative w-8 h-4 rounded-full transition-colors ${isLooping ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${isLooping ? 'translate-x-4' : 'translate-x-0'}`}></div></div>
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('loop')}</span>
-                        <input type="checkbox" className="hidden" checked={isLooping} onChange={() => setIsLooping(!isLooping)} />
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => { if (!isPlaying && currentFrameIndex >= frames.length - 1) setCurrentFrameIndex(0); setIsPlaying(!isPlaying); }} className={`w-10 h-10 flex items-center justify-center rounded-full transition-all flex-shrink-0 shadow-md ${isPlaying ? 'bg-slate-800 dark:bg-slate-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
-                        {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 ml-1 fill-current" />}
-                      </button>
-                      <FilterSliderWithInput value={speed} min={0.1} max={5.0} step={0.1} onChange={setSpeed} />
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">{t('speed')}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* 分頁按鈕 */}
-                <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-                  {frames.length === 1 && (<button onClick={() => setActiveTab('convert')} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'convert' ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border-b-2 border-transparent'}`}><Wand2 className="w-4 h-4" /> {t('convertAnim')}</button>)}
-                  {frames.length > 1 && (
-                    <>
-                      <button onClick={() => setActiveTab('global')} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'global' ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border-b-2 border-transparent'}`}><Globe className="w-4 h-4" /> {t('global')}</button>
-                      <button onClick={() => { setActiveTab('edit'); setIsPlaying(false); }} className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'edit' ? 'text-purple-600 dark:text-purple-400 bg-white dark:bg-slate-800 border-b-2 border-purple-600' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border-b-2 border-transparent'}`}><Sparkles className="w-4 h-4" /> {t('editFx')}</button>
-                    </>
-                  )}
-                </div>
-
-                <div className="p-5 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 bg-white dark:bg-slate-800">
-                  
-                  {activeTab === 'convert' && frames.length === 1 && (
-                    <section className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
-                      <h2 className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-3">{t('animLength')}</h2>
-                      <div className="flex flex-col gap-4">
-                        <div>
-                          <label className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-1 block">{t('autoFx')}</label>
-                          <select value={convertEffect} onChange={(e) => setConvertEffect(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-700 dark:bg-slate-800 text-sm">
-                            <option value="none">{t('none')}</option>
-                            <option value="hue">🌈 色彩循環</option>
-                            <option value="pulse">✨ 呼吸閃爍</option>
-                            <option value="spin">🌀 360度旋轉</option>
-                            <option value="zoom">🔍 縮放跳動</option>
-                          </select>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs mb-1 font-bold text-blue-700 dark:text-blue-400"><label>{t('sec')}</label></div>
-                          <FilterSliderWithInput value={targetSeconds} min={0.5} max={30} step={0.5} onChange={setTargetSeconds} />
-                        </div>
-                        <button onClick={convertToAnimation} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm">{t('startConvert')}</button>
-                      </div>
-                    </section>
-                  )}
-
-                  {activeTab === 'global' && frames.length > 1 && (
-                    <div className="space-y-6">
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-3"><Clock className="w-3 h-3 inline mr-1"/> {t('timeCtrl')}</h2>
-                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                           <div className="flex items-center gap-2 mb-3">
-                               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">{t('totalLen')}:</span>
-                               <button onClick={()=>adjustTotalSeconds(1)} className="flex-1 py-1.5 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold rounded hover:bg-green-200 shadow-sm">+1s</button>
-                               <button onClick={()=>adjustTotalSeconds(-1)} className="flex-1 py-1.5 text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 font-bold rounded hover:bg-orange-200 shadow-sm">-1s</button>
-                           </div>
-                           
-                           {/* 插入延長時間區塊 */}
-                           <div className="flex items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
-                              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">{t('addTimeLen')}:</span>
-                              <input type="number" value={addSecondsInput} onChange={(e)=>setAddSecondsInput(Number(e.target.value))} min="0.1" step="0.1" className="w-14 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 px-1 py-1 text-[11px] rounded" />
-                              <span className="text-[10px] text-slate-500">s</span>
-                              <select value={addPosition} onChange={(e)=>setAddPosition(e.target.value)} className="border border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-[11px] rounded px-1 py-1">
-                                <option value="start">{t('addStart')}</option>
-                                <option value="end">{t('addEnd')}</option>
-                              </select>
-                              <button onClick={handleAddFramesByTime} className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 rounded hover:bg-purple-200 shadow-sm font-bold ml-auto">{t('insertFrames')}</button>
-                           </div>
-
-                           <div className="flex items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
-                               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">統一停留:</span>
-                               <input type="number" id="globalDelayInput" defaultValue={100} className="w-14 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 px-1 py-1 text-[11px] rounded" />
-                               <span className="text-[10px] text-slate-500">ms</span>
-                               <button onClick={()=>{
-                                   const val = Number(document.getElementById('globalDelayInput').value);
-                                   if(val >= 10) {
-                                       isRestoring.current = true;
-                                       setFrames(prev => prev.map(f => ({...f, delay: val})));
-                                       setTimeout(() => { isRestoring.current = false; }, 50);
-                                   }
-                               }} className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 shadow-sm font-bold ml-auto">{t('set')}</button>
-                           </div>
-                        </div>
-                      </section>
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-3"><FlipHorizontal className="w-3 h-3 inline mr-1"/> {t('flip')}</h2>
-                        <div className="flex gap-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                          <button onClick={() => setGlobalFlipX(!globalFlipX)} className={`flex-1 py-2 text-xs font-bold rounded flex items-center justify-center transition-colors shadow-sm ${globalFlipX ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'}`}><FlipHorizontal className="w-4 h-4 mr-1"/> {t('flipH')}</button>
-                          <button onClick={() => setGlobalFlipY(!globalFlipY)} className={`flex-1 py-2 text-xs font-bold rounded flex items-center justify-center transition-colors shadow-sm ${globalFlipY ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'}`}><FlipVertical className="w-4 h-4 mr-1"/> {t('flipV')}</button>
-                        </div>
-                      </section>
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-3"><Eraser className="w-3 h-3 inline mr-1"/> {t('bgRemover')}</h2>
-                        <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                          <select value={bgRemoval.type} onChange={(e) => setBgRemoval({...bgRemoval, type: e.target.value})} className="w-full px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 dark:bg-slate-700 text-sm">
-                            <option value="none">{t('none')}</option><option value="green">{t('green')}</option>
-                            <option value="black">{t('black')}</option><option value="white">{t('white')}</option><option value="custom">{t('customColor')}</option>
-                          </select>
-                          {bgRemoval.type === 'custom' && <input type="color" value={bgRemoval.color} onChange={(e) => setBgRemoval({...bgRemoval, color: e.target.value})} className="w-full h-8 border-0" />}
-                          {bgRemoval.type !== 'none' && (
-                             <div><label className="text-[10px] text-slate-500 dark:text-slate-400">{t('tolerance')}</label><FilterSliderWithInput value={bgRemoval.tolerance} min={0} max={200} onChange={(v)=>setBgRemoval({...bgRemoval, tolerance: v})} /></div>
-                          )}
-                        </div>
-                      </section>
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-3"><SlidersHorizontal className="w-3 h-3 inline mr-1"/> {t('globalFilters')}</h2>
-                        <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                          <div><label className="text-[10px] font-bold">{t('opacity')} (%)</label><FilterSliderWithInput value={globalOpacity * 100} min={0} max={100} onChange={v => setGlobalOpacity(v / 100)} /></div>
-                          <div><label className="text-[10px] font-bold">{t('hue')} (°)</label><FilterSliderWithInput value={globalHue} min={0} max={360} onChange={setGlobalHue} /></div>
-                          <div><label className="text-[10px] font-bold">{t('sat')} (%)</label><FilterSliderWithInput value={globalSaturation} min={0} max={200} onChange={setGlobalSaturation} /></div>
-                          <div><label className="text-[10px] font-bold">{t('contrast')} (%)</label><FilterSliderWithInput value={globalContrast} min={0} max={200} onChange={setGlobalContrast} /></div>
-                          <div><label className="text-[10px] font-bold">{t('invert')} (%)</label><FilterSliderWithInput value={globalInvert} min={0} max={100} onChange={setGlobalInvert} /></div>
-                        </div>
-                      </section>
-                    </div>
-                  )}
-
-                  {activeTab === 'edit' && frames.length > 1 && (
-                    <div className="space-y-4 animate-fade-in pb-8">
-                      {/* Track Selector */}
-                      <div className="flex gap-1 p-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-lg flex-wrap shadow-inner">
-                         {['opacity', 'scale', 'rotate', 'translate', 'color'].map(tId => (
-                            <button key={tId} onClick={()=>setGradType(tId)} className={`flex-1 min-w-[50px] py-1.5 text-[11px] font-bold rounded-md shadow-sm transition-all ${gradType===tId?'bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-700':'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-                               {t(TRACKS_INFO.find(x=>x.id===tId).labelKey)}
-                            </button>
-                         ))}
-                      </div>
-
-                      {/* Current Frame FX */}
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
-                         <div className="absolute top-0 left-0 w-1 h-full" style={{backgroundColor: TRACKS_INFO.find(x=>x.id===gradType)?.stroke}}></div>
-                         
-                         <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-700 pb-3">
-                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 px-2 py-1 bg-white dark:bg-slate-700 rounded shadow-sm border border-slate-200 dark:border-slate-600">{t('currFrame', {n: currentFrameIndex})}</span>
-                            {(() => {
-                               const hasKeyframeCurrent = frames[currentFrameIndex]?.keyframes[gradType];
-                               return (
-                                 <button 
-                                    onClick={() => {
-                                       if (hasKeyframeCurrent) {
-                                          isRestoring.current = true;
-                                          setFrames(prev => {
-                                             const newF = [...prev];
-                                             newF[currentFrameIndex] = {...newF[currentFrameIndex], keyframes: {...newF[currentFrameIndex].keyframes, [gradType]: false}};
-                                             return newF;
-                                          });
-                                          if (selectedKeyframe?.idx === currentFrameIndex && selectedKeyframe?.trackId === gradType) setSelectedKeyframe(null);
-                                          setTimeout(() => { isRestoring.current = false; }, 50);
-                                       } else {
-                                          handleAddKeyframeCurrent(gradType);
-                                       }
-                                    }} 
-                                    className={`text-[10px] px-3 py-1.5 rounded font-bold flex items-center transition-colors shadow-sm ${hasKeyframeCurrent ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                                    {hasKeyframeCurrent ? <><X className="w-3 h-3 mr-1"/> {t('rmNode')}</> : <><Plus className="w-3 h-3 mr-1"/> {t('addNode')}</>}
-                                 </button>
-                               );
-                            })()}
-                         </div>
-
-                         <div className="space-y-4 mb-4">
-                            {gradType === 'opacity' && <div><label className="text-[10px] font-bold text-purple-600 mb-1 block">{t('opacity')} (%)</label><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.opacity * 100} min={0} max={100} onChange={(v) => updateFrameFilter('opacity', v / 100)} /></div>}
-                            {gradType === 'scale' && <div><label className="text-[10px] font-bold text-pink-600 mb-1 block">{t('scale')} (%)</label><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.scale * 100} min={0} max={500} onChange={(v) => updateFrameFilter('scale', v / 100)} /></div>}
-                            {gradType === 'rotate' && <div><label className="text-[10px] font-bold text-green-600 mb-1 block">{t('rotate')} (°)</label><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.rotate || 0} min={-360} max={360} onChange={(v) => updateFrameFilter('rotate', v)} /></div>}
-                            {gradType === 'translate' && (
-                               <>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-blue-600 w-8">X 軸</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.translateX || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateX', v)} /></div>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-blue-600 w-8">Y 軸</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.translateY || 0} min={-2000} max={2000} onChange={(v) => updateFrameFilter('translateY', v)} /></div>
-                                </>
-                            )}
-                            {gradType === 'color' && (
-                               <>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-orange-600 w-10">{t('hue')}</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.hue} min={0} max={360} onChange={(v) => updateFrameFilter('hue', v)} /></div>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-orange-600 w-10">{t('sat')}</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.saturation} min={0} max={200} onChange={(v) => updateFrameFilter('saturation', v)} /></div>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-orange-600 w-10">亮度</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.brightness} min={0} max={200} onChange={(v) => updateFrameFilter('brightness', v)} /></div>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-orange-600 w-10">{t('contrast')}</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.contrast} min={0} max={200} onChange={(v) => updateFrameFilter('contrast', v)} /></div>
-                                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-orange-600 w-10">{t('invert')}</span><FilterSliderWithInput value={frames[currentFrameIndex].customFilters.invert || 0} min={0} max={100} onChange={(v) => updateFrameFilter('invert', v)} /></div>
-                               </>
-                            )}
-                         </div>
-
-                         <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-3">
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{t('nextEasing')}:</span>
-                            <select value={frames[currentFrameIndex].easings[gradType]} onChange={(e) => {
-                                isRestoring.current = true;
-                                setFrames(prev => {
-                                   const newF = [...prev];
-                                   newF[currentFrameIndex] = {...newF[currentFrameIndex], easings: {...newF[currentFrameIndex].easings, [gradType]: e.target.value}};
-                                   return newF;
-                                });
-                                setTimeout(() => { isRestoring.current = false; }, 50);
-                            }} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-[11px] focus:outline-none font-bold text-blue-700 dark:text-blue-400">
-                               <option value="linear">{t('linear')}</option>
-                               <option value="easeIn">{t('easeIn')}</option>
-                               <option value="easeOut">{t('easeOut')}</option>
-                               <option value="easeInOut">{t('easeInOut')}</option>
-                            </select>
-                         </div>
-                      </div>
-
-                      {/* Auto Gradient Generator */}
-                      <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm relative">
-                        <span className="text-[11px] font-bold text-purple-800 dark:text-purple-300 mb-3 block">{t('autoGen')}</span>
-                        
-                        <div className="flex items-center justify-between mb-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded border border-purple-100 dark:border-purple-800">
-                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{t('genEasing')}:</span>
-                           <select value={gradEasing} onChange={(e) => setGradEasing(e.target.value)} className="px-2 py-1 rounded border border-purple-200 dark:border-purple-700 text-[10px] focus:outline-none font-bold text-purple-700 dark:text-purple-300 bg-white dark:bg-slate-700">
-                             <option value="linear">{t('linear')}</option>
-                             <option value="easeIn">{t('easeIn')}</option>
-                             <option value="easeOut">{t('easeOut')}</option>
-                             <option value="easeInOut">{t('easeInOut')}</option>
-                           </select>
-                        </div>
-
-                        {gradType === 'opacity' && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">目標透明度 (%)</label><FilterSliderWithInput value={gradOpacityTarget} min={0} max={100} onChange={setGradOpacityTarget} /></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                              <button onClick={() => triggerExplicitGradient('opacity_fadeTo')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">100% 淡出至目標</button>
-                              <button onClick={() => triggerExplicitGradient('opacity_fadeFrom')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">目標 淡入至 100%</button>
-                              <button onClick={() => triggerExplicitGradient('opacity_pulse')} className="col-span-2 py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">呼吸閃爍 (100% - 目標 - 100%)</button>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {gradType === 'scale' && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">起點比例 (%)</label><FilterSliderWithInput value={gradScaleStart} min={0} max={500} onChange={setGradScaleStart} /></div>
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">終點比例 (%)</label><FilterSliderWithInput value={gradScaleEnd} min={0} max={500} onChange={setGradScaleEnd} /></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                              <button onClick={() => triggerExplicitGradient('scale_to')} className="col-span-2 py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">縮放至終點比例</button>
-                              <button onClick={() => triggerExplicitGradient('scale_pulse')} className="col-span-2 py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">呼吸縮放 (起 - 終 - 起)</button>
-                            </div>
-                          </div>
-                        )}
-
-                        {gradType === 'rotate' && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">起點角度 (°)</label><FilterSliderWithInput value={gradRotStart} min={-360} max={360} onChange={setGradRotStart} /></div>
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">終點角度 (°)</label><FilterSliderWithInput value={gradRotEnd} min={-360} max={360} onChange={setGradRotEnd} /></div>
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">順時針一圈</button>
-                               <button onClick={() => { setGradRotStart(0); setGradRotEnd(-360); triggerExplicitGradient('rotate'); }} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">逆時針一圈</button>
-                            </div>
-                          </div>
-                        )}
-
-                        {gradType === 'translate' && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">X 軸 終點偏移 (px)</label><FilterSliderWithInput value={gradMoveEndX} min={-2000} max={2000} onChange={setGradMoveEndX} /></div>
-                            <div className="border-t border-purple-200 dark:border-purple-800"></div>
-                            <div><label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">Y 軸 終點偏移 (px)</label><FilterSliderWithInput value={gradMoveEndY} min={-2000} max={2000} onChange={setGradMoveEndY} /></div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                               <button onClick={() => handleQuickMove('right')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">向右移出畫布</button>
-                               <button onClick={() => handleQuickMove('left')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">向左移出畫布</button>
-                               <button onClick={() => handleQuickMove('down')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">向下落出畫布</button>
-                               <button onClick={() => handleQuickMove('up')} className="py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-[10px] font-bold rounded-lg shadow-sm hover:border-purple-400 transition-colors">向上飛出畫布</button>
-                            </div>
-                          </div>
-                        )}
-                        <button onClick={() => triggerExplicitGradient(`${gradType}_reset`)} className="w-full mt-3 py-2 bg-white/50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 text-xs font-bold rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors shadow-sm">{t('clearTrack')}</button>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-
-                {/* 匯出面板 (打開 Modal) */}
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-                  <button onClick={() => {
-                      setExportConfig(prev => ({...prev, customFrameCount: frames.length}));
-                      setIsExportModalOpen(true);
-                  }} disabled={isExporting || frames.length === 0} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
-                      <Download className="w-5 h-5" /> {t('exportSettingsBtn')}
-                  </button>
-                  <input id="file-upload" type="file" accept=".json, application/json, image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onFileChange} />
-                  <input id="replace-upload" type="file" accept=".json, application/json, image/gif, image/png, image/apng, image/jpeg, image/webp, video/*" className="hidden" disabled={!isAppReady} onChange={onReplaceFileChange} />
-                </div>
-              </div>
-            )}
-          </main>
-
-          <style dangerouslySetInnerHTML={{__html: `
-            .checkered-bg-light {
-              background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
-              background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            }
-            .checkered-bg-dark {
-              background-image: linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%);
-              background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; background-color: #0f172a;
-            }
-            .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-            .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
-            .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-            input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-          `}} />
-        </div>
-      );
-    }
-
-    // 結合 Range 與 Number 雙向綁定的 UI 元件
-    function FilterSliderWithInput({ value, min, max, step = 1, onChange }) {
-      const isFloat = !Number.isInteger(step);
-      const [localVal, setLocalVal] = React.useState(isFloat ? Number(value).toFixed(1) : Math.round(value));
-      const [isEditing, setIsEditing] = React.useState(false);
-
-      React.useEffect(() => {
-        if (!isEditing) {
-          setLocalVal(isFloat ? Number(value).toFixed(1) : Math.round(value));
-        }
-      }, [value, isFloat, isEditing]);
-
-      const handleInputChange = (e) => {
-        setLocalVal(e.target.value);
-      };
-      
-      const handleBlur = () => {
-        setIsEditing(false);
-        let val = parseFloat(localVal);
-        if (isNaN(val)) val = value;
-        val = Math.max(min, val);
-        onChange(val);
-        setLocalVal(isFloat ? Number(val).toFixed(1) : Math.round(val));
-      };
-
-      const handleKeyDown = (e) => {
-        if (e.key === 'Enter') e.target.blur();
-      };
-
-      return (
-        <div className="flex items-center gap-3">
-          <input type="range" min={min} max={max} step={step} value={value > max ? max : value} onChange={(e) => onChange(parseFloat(e.target.value))} className="flex-1 accent-blue-500 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" />
-          <input type="number" step={step} value={isEditing ? localVal : (isFloat ? Number(value).toFixed(1) : Math.round(value))} onChange={handleInputChange} onFocus={() => setIsEditing(true)} onBlur={handleBlur} onKeyDown={handleKeyDown} className="w-[52px] px-1 py-1 text-[11px] text-right border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded font-mono text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 shrink-0 shadow-inner" />
-        </div>
-      );
-    }
-
-    const FrameThumbnail = React.memo(({ sourceCanvas, filters, globalFlipX, globalFlipY }) => {
-      const ref = React.useRef(null);
-      React.useEffect(() => {
-        if (ref.current && sourceCanvas) {
-          const ctx = ref.current.getContext('2d', { willReadFrequently: true });
-          const w = ref.current.width;
-          const h = ref.current.height;
-          ctx.clearRect(0, 0, w, h);
-          
-          const { opacity, filterString, rotate, scale, translateX, translateY } = filters;
-          
-          if (opacity > 0.005) {
-              const thumbScale = Math.min(w / sourceCanvas.width, h / sourceCanvas.height);
-              const sw = sourceCanvas.width * thumbScale;
-              const sh = sourceCanvas.height * thumbScale;
-              
-              ctx.save();
-              ctx.globalAlpha = opacity;
-              ctx.filter = filterString;
-              
-              // 基準點移至中心
-              ctx.translate(w/2, h/2);
-              // 按照縮放比例套用位移 (避免縮圖裡的位移爆出畫布)
-              ctx.translate(translateX * thumbScale, translateY * thumbScale);
-              ctx.rotate((rotate * Math.PI) / 180);
-              ctx.scale(scale * (globalFlipX ? -1 : 1), scale * (globalFlipY ? -1 : 1));
-              
-              ctx.translate(-sw/2, -sh/2);
-              ctx.drawImage(sourceCanvas, 0, 0, sw, sh);
-              ctx.restore();
+      // 構建純 JavaScript UI 樹，徹底規避 JSX 與 Babel 轉譯風險
+      return e('div', { className: 'flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans overflow-hidden relative' },
+        e('header', { className: 'px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shadow-sm z-10 shrink-0' },
+          e('h1', { className: 'text-xl font-bold flex items-center gap-2' }, e(Icon, { name: 'image', className: 'w-6 h-6 text-blue-600' }), '動態影像編輯器'),
+          e('button', { onClick: () => setTheme(theme === 'light' ? 'dark' : 'light'), className: 'p-2 bg-slate-100 dark:bg-slate-800 rounded-lg' }, e(Icon, { name: theme === 'light' ? 'moon' : 'sun' }))
+        ),
+        e('main', { className: 'flex-1 flex overflow-hidden flex-col md:flex-row relative' },
+          e('div', { className: 'flex-1 flex flex-col justify-center items-center p-8 checkered-bg-light relative min-h-0' },
+            error && e('div', { className: 'absolute top-4 bg-red-100 text-red-700 px-4 py-2 rounded shadow' }, error),
+            frames.length > 0 ? e('canvas', { ref: canvasRef, className: 'max-w-full max-h-full object-contain shadow-lg' }) : e('div', {
+              className: 'border-2 border-dashed border-slate-300 p-12 text-center rounded-2xl cursor-pointer bg-white dark:bg-slate-800',
+              onClick: () => document.getElementById('file-upload').click()
+            }, e(Icon, { name: 'upload', className: 'w-12 h-12 text-blue-500 mx-auto mb-4' }), e('p', { className: 'text-lg font-bold' }, '匯入圖片 / 序列 / 動畫')),
+            isLoading && e('div', { className: 'absolute inset-0 bg-white/60 flex items-center justify-center font-bold' }, '處理中...')
+          ),
+          frames.length > 0 && e('div', { className: 'w-full md:w-[360px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 overflow-y-auto' },
+            e('div', { className: 'flex gap-4 items-center' },
+              e('button', { onClick: () => setIsPlaying(!isPlaying), className: 'p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700' }, e(Icon, { name: isPlaying ? 'pause' : 'play' })),
+              e('span', { className: 'text-sm font-bold' }, isPlaying ? '暫停播放' : '開始播放'),
+              e('label', { className: 'flex items-center gap-2 ml-auto cursor-pointer text-xs' }, e('input', { type: 'checkbox', checked: isLooping, onChange: () => setIsLooping(!isLooping) }), '循環播放')
+            ),
+            e('hr', { className: 'dark:border-slate-700' }),
+            e('div', { className: 'space-y-4' },
+              e('div', null, e('span', { className: 'text-xs font-bold block mb-1' }, '色彩調整 (色相偏轉)'), e('input', { type: 'range', min: '0', max: '360', value: globalHue, onChange: e => setGlobalHue(Number(e.target.value)), className: 'w-full accent-blue-500' })),
+              e('div', null, e('span', { className: 'text-xs font-bold block mb-1' }, '整體透明度'), e('input', { type: 'range', min: '0', max: '100', value: globalOpacity * 100, onChange: e => setGlobalOpacity(Number(e.target.value) / 100), className: 'w-full accent-blue-500' })),
+              e('div', { className: 'flex gap-2 pt-2' },
+                e('button', { onClick: () => setGlobalFlipX(!globalFlipX), className: 'flex-1 py-1.5 text-xs border rounded ' + (globalFlipX ? 'bg-blue-100 border-blue-400' : 'bg-transparent') }, '水平翻轉'),
+                e('button', { onClick: () => setGlobalFlipY(!globalFlipY), className: 'flex-1 py-1.5 text-xs border rounded ' + (globalFlipY ? 'bg-blue-100 border-blue-400' : 'bg-transparent') }, '垂直翻轉')
+              )
+            ),
+            e('button', { onClick: () => setIsExportModalOpen(true), className: 'w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg mt-auto' }, '匯出 / 下載設定')
+          )
+        ),
+        isExportModalOpen && e('div', { className: 'fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[999]' },
+          e('div', { className: 'bg-white dark:bg-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4' },
+            e('h3', { className: 'font-bold text-lg' }, '確認導出設定'),
+            e('p', { className: 'text-xs text-slate-500' }, '將輸出為高畫質、支援透明通道的 APNG 格式。'),
+            e('div', { className: 'flex gap-2' },
+              e('button', { onClick: () => setIsExportModalOpen(false), className: 'flex-1 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm' }, '取消'),
+              e('button', { onClick: handleConfirmExport, className: 'flex-1 py-2 bg-blue-600 text-white rounded text-sm' }, '確認匯出')
+            )
+          )
+        ),
+        e('input', { id: 'file-upload', type: 'file', accept: 'image/gif,image/png,image/apng', className: 'hidden', onChange: e => handleFileDropOrSelect(e.target.files[0]) }),
+        e('style', null, `
+          .checkered-bg-light {
+            background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
           }
-        }
-      }, [sourceCanvas, filters, globalFlipX, globalFlipY]);
-      
-      return <canvas ref={ref} width={64} height={64} className="w-full h-full object-contain pointer-events-none drop-shadow-sm" />;
-      
-    }, (prev, next) => {
-        // 自訂比對，大幅提升效能
-        return prev.sourceCanvas === next.sourceCanvas &&
-               prev.globalFlipX === next.globalFlipX &&
-               prev.globalFlipY === next.globalFlipY &&
-               prev.filters.opacity === next.filters.opacity &&
-               prev.filters.filterString === next.filters.filterString &&
-               prev.filters.rotate === next.filters.rotate &&
-               prev.filters.translateX === next.filters.translateX &&
-               prev.filters.translateY === next.filters.translateY &&
-               prev.filters.scale === next.filters.scale;
-    });
+        `)
+      );
+    }
 
-    const root = createRoot(document.getElementById('root'));
-    root.render(<App />);
+    const root = Trinity = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(e(App));
   </script>
 </body>
 </html>
